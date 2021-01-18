@@ -305,7 +305,7 @@ describe('.parse() math-trig formulas', () => {
   it('LOG', () => {
     expect(parser.parse('LOG()')).toMatchObject({error: '#VALUE!', result: null});
     expect(parser.parse('LOG("value")')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('LOG(1)')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('LOG(1)')).toMatchObject({error: null, result: 0});
     expect(parser.parse('LOG(10, 10)')).toMatchObject({error: null, result: 1});
   });
 

@@ -1,5 +1,5 @@
 {
-  "name": "hot-formula-parser",
+  "name": "@startinfinity/hot-formula-parser",
   "version": "4.0.0",
   "description": "Formula parser",
   "main": "./index",
@@ -30,7 +30,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/handsontable/formula-parser.git"
+    "url": "https://github.com/nikazooz/formula-parser.git"
   },
   "keywords": [
     "formula",
@@ -40,12 +40,12 @@
     "excel",
     "spreadsheet"
   ],
-  "author": "Handsoncode <hello@handsontable.com>",
+  "author": "Nenad Živanović <nenad@zoozdev.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/handsontable/formula-parser/issues"
+    "url": "https://github.com/nikazooz/formula-parser/issues"
   },
-  "homepage": "https://github.com/handsontable/formula-parser",
+  "homepage": "https://github.com/nikazooz/formula-parser",
   "devDependencies": {
     "@babel/cli": "^7.12.10",
     "@babel/core": "^7.12.10",
@@ -65,7 +65,7 @@
     "webpack-cli": "^4.2.0"
   },
   "dependencies": {
-    "@handsontable/formulajs": "^2.0.2",
+    "@formulajs/formulajs": "^2.6.2",
     "tiny-emitter": "^2.1.0"
   },
   "jest": {

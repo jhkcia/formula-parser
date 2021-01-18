@@ -23,8 +23,8 @@ describe('.parse() date & time formulas', () => {
 
   it('DATEVALUE', () => {
     expect(parser.parse('DATEVALUE()')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('DATEVALUE("1/1/1900")')).toMatchObject({error: null, result: 1});
-    expect(parser.parse('DATEVALUE("1/1/2000")')).toMatchObject({error: null, result: 36526});
+    expect(parser.parse('DATEVALUE("1/1/1900")')).toMatchObject({error: null, result: new Date(1900, 0, 1)});
+    expect(parser.parse('DATEVALUE("1/1/2000")')).toMatchObject({error: null, result: new Date(2000, 0, 1)});
   });
 
   it('DAY', () => {
@@ -52,13 +52,13 @@ describe('.parse() date & time formulas', () => {
   it('EDATE', () => {
     expect(parser.parse('EDATE()')).toMatchObject({error: '#VALUE!', result: null});
     expect(parser.parse('EDATE(1)')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('EDATE("1/1/1900", 1)')).toMatchObject({error: null, result: 32});
+    expect(parser.parse('EDATE("1/1/1900", 1)')).toMatchObject({error: null, result: new Date(1900, 1, 1)});
   });
 
   it('EOMONTH', () => {
     expect(parser.parse('EOMONTH()')).toMatchObject({error: '#VALUE!', result: null});
     expect(parser.parse('EOMONTH(1)')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('EOMONTH("1/1/1900", 1)')).toMatchObject({error: null, result: 59});
+    expect(parser.parse('EOMONTH("1/1/1900", 1)')).toMatchObject({error: null, result: new Date(1900, 1, 28)});
   });
 
   it('HOUR', () => {

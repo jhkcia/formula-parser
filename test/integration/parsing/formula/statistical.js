@@ -773,8 +773,8 @@ describe('.parse() statistical formulas', () => {
   });
 
   it('TDIST', () => {
-    expect(parser.parse('TDIST()')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('TDIST(1)')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('TDIST()')).toMatchObject({error: '#NUM!', result: null});
+    expect(parser.parse('TDIST(1)')).toMatchObject({error: '#NUM!', result: null});
     expect(parser.parse('TDIST(1, 3)')).toBeMatchCloseTo({error: null, result: 0.2067483346226397});
     expect(parser.parse('TDIST(1, 3, TRUE)')).toBeMatchCloseTo({error: null, result: 0.8044988904727264});
     expect(parser.parse('T.DIST(1, 3, TRUE)')).toBeMatchCloseTo({error: null, result: 0.8044988904727264});
