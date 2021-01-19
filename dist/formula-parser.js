@@ -1013,7 +1013,7 @@ exports.LOG2E = function() {
 
 exports.LOG = function(number, base) {
   number = utils.parseNumber(number);
-  base = utils.parseNumber(base);
+  base = base ? utils.parseNumber(base) : 10;
   if (utils.anyIsError(number, base)) {
     return error.value;
   }
@@ -1039,6 +1039,7 @@ exports.MOD = function(dividend, divisor) {
     return error.div0;
   }
   var modulus = Math.abs(dividend % divisor);
+  modulus = dividend < 0 ? divisor - modulus : modulus;
   return (divisor > 0) ? modulus : -modulus;
 };
 
@@ -1488,25 +1489,29 @@ exports.SUM = function() {
   return result;
 };
 
-exports.SUMIF = function(range, criteria) {
-  range = utils.parseNumberArray(utils.flatten(range));
-
+exports.SUMIF = function (range, criteria, sumRange) {
+  range = utils.flatten(range);
+  if (sumRange) {
+    sumRange = utils.flatten(sumRange);
+  } else {
+    sumRange = range;
+  }
   if (range instanceof Error) {
     return range;
   }
   var result = 0;
   var isWildcard = criteria === void 0 || criteria === '*';
   var tokenizedCriteria = isWildcard ? null : evalExpression.parse(criteria + '');
-
   for (var i = 0; i < range.length; i++) {
     var value = range[i];
+    var sumValue = sumRange[i];
 
     if (isWildcard) {
       result += value;
     } else {
       var tokens = [evalExpression.createToken(value, evalExpression.TOKEN_TYPE_LITERAL)].concat(tokenizedCriteria);
 
-      result += (evalExpression.compute(tokens) ? value : 0);
+      result += (evalExpression.compute(tokens) ? sumValue : 0);
     }
   }
 
@@ -1520,17 +1525,22 @@ exports.SUMIFS = function() {
   if (range instanceof Error) {
     return range;
   }
+
   var criterias = args;
-  var n_range_elements = range.length;
-  var criteriaLength = criterias.length;
+  var criteriaLength = criterias.length / 2;
+
+  for (var i = 0; i < criteriaLength; i++) {
+    criterias[i * 2] = utils.flatten(criterias[i * 2]);
+  }
+
   var result = 0;
 
-  for (var i = 0; i < n_range_elements; i++) {
-    var value = range[i];
+  for (var i = 0; i < range.length; i++) {
     var isMeetCondition = false;
 
     for (var j = 0; j < criteriaLength; j++) {
-      var criteria = criterias[j];
+      var valueToTest = criterias[j * 2][i];
+      var criteria = criterias[j * 2 + 1];
       var isWildcard = criteria === void 0 || criteria === '*';
       var computedResult = false;
 
@@ -1538,7 +1548,7 @@ exports.SUMIFS = function() {
         computedResult = true;
       } else {
         var tokenizedCriteria = evalExpression.parse(criteria + '');
-        var tokens = [evalExpression.createToken(value, evalExpression.TOKEN_TYPE_LITERAL)].concat(tokenizedCriteria);
+        var tokens = [evalExpression.createToken(valueToTest, evalExpression.TOKEN_TYPE_LITERAL)].concat(tokenizedCriteria);
 
         computedResult = evalExpression.compute(tokens);
       }
@@ -1553,7 +1563,7 @@ exports.SUMIFS = function() {
     }
 
     if (isMeetCondition) {
-      result += value;
+      result += range[i];
     }
   }
 
@@ -3300,13 +3310,12 @@ exports.TRANSPOSE = function(matrix) {
 
 exports.T = text.T;
 
-exports.T.DIST = function(x, df, cumulative) {
-  x = utils.parseNumber(x);
-  df = utils.parseNumber(df);
-  if (utils.anyIsError(x, df)) {
-    return error.value;
+exports.T.DIST = function (x, df, tails) {
+  if (tails !== 1 && tails !== 2) {
+    return error.num;
   }
-  return (cumulative) ? jStat.studentt.cdf(x, df) : jStat.studentt.pdf(x, df);
+
+  return (tails === 1) ? exports.T.DIST.RT(x, df) : exports.T.DIST['2T'](x, df);
 };
 
 exports.T.DIST['2T'] = function(x, df) {
@@ -3785,10 +3794,10 @@ exports.SPLIT = function (text, separator) {
 };
 
 exports.SUBSTITUTE = function(text, old_text, new_text, occurrence) {
-  if (arguments.length < 2) {
+  if (arguments.length < 3) {
     return error.na;
   }
-  if (!text || !old_text || !new_text) {
+  if (!text || !old_text) {
     return text;
   } else if (occurrence === undefined) {
     return text.replace(new RegExp(old_text, 'g'), new_text);
@@ -4242,7 +4251,7 @@ var WEEKEND_TYPES = [
   [6, 6]
 ];
 
-exports.DATE = function(year, month, day) {
+exports.DATE = function (year, month, day) {
   var result;
 
   year = utils.parseNumber(year);
@@ -4262,28 +4271,82 @@ exports.DATE = function(year, month, day) {
   return result;
 };
 
-exports.DATEVALUE = function(date_text) {
-  var modifier = 2;
-  var date;
+exports.DATEDIF = function (start_date, end_date, unit) {
+  unit = unit.toUpperCase();
+  start_date = utils.parseDate(start_date);
+  end_date = utils.parseDate(end_date);
 
+  var start_date_year = start_date.getFullYear();
+  var start_date_month = start_date.getMonth();
+  var start_date_day = start_date.getDate();
+  var end_date_year = end_date.getFullYear();
+  var end_date_month = end_date.getMonth();
+  var end_date_day = end_date.getDate();
+
+  var result;
+  switch (unit) {
+    case 'Y':
+      result = Math.floor(exports.YEARFRAC(start_date, end_date));
+      break;
+    case 'D':
+      result = exports.DAYS(end_date, start_date);
+      break;
+    case 'M':
+      result = end_date_month - start_date_month + 12 * (end_date_year - start_date_year);
+      if (end_date_day < start_date_day) {
+        result--;
+      }
+      break;
+    case 'MD':
+      if (start_date_day <= end_date_day) {
+        result = end_date_day - start_date_day;
+      } else {
+        if (end_date_month === 0) {
+          start_date.setFullYear(end_date_year - 1);
+          start_date.setMonth(12);
+        } else {
+          start_date.setFullYear(end_date_year);
+          start_date.setMonth(end_date_month - 1);
+        }
+        result = exports.DAYS(end_date, start_date);
+      }
+      break;
+    case 'YM':
+      result = end_date_month - start_date_month + 12 * (end_date_year - start_date_year);
+      if (end_date_day < start_date_day) {
+        result--;
+      }
+      result = result % 12;
+      break;
+    case 'YD':
+      if (end_date_month > start_date_month || (end_date_month === start_date_month && end_date_day < start_date_day)) {
+        start_date.setFullYear(end_date_year);
+      } else {
+        start_date.setFullYear(end_date_year - 1);
+      }
+
+      result = exports.DAYS(end_date, start_date);
+      break;
+  }
+
+  return result;
+};
+
+exports.DATEVALUE = function (date_text) {
   if (typeof date_text !== 'string') {
     return error.value;
   }
 
-  date = Date.parse(date_text);
+  var date = Date.parse(date_text);
 
   if (isNaN(date)) {
     return error.value;
   }
 
-  if (date <= -2203891200000) {
-    modifier = 1;
-  }
-
-  return Math.ceil((date - d1900) / 86400000) + modifier;
+  return new Date(date_text);
 };
 
-exports.DAY = function(serial_number) {
+exports.DAY = function (serial_number) {
   var date = utils.parseDate(serial_number);
   if (date instanceof Error) {
     return date;
@@ -4292,7 +4355,7 @@ exports.DAY = function(serial_number) {
   return date.getDate();
 };
 
-exports.DAYS = function(end_date, start_date) {
+exports.DAYS = function (end_date, start_date) {
   end_date = utils.parseDate(end_date);
   start_date = utils.parseDate(start_date);
 
@@ -4306,7 +4369,7 @@ exports.DAYS = function(end_date, start_date) {
   return serial(end_date) - serial(start_date);
 };
 
-exports.DAYS360 = function(start_date, end_date, method) {
+exports.DAYS360 = function (start_date, end_date, method) {
   method = utils.parseBool(method);
   start_date = utils.parseDate(start_date);
   end_date = utils.parseDate(end_date);
@@ -4347,7 +4410,7 @@ exports.DAYS360 = function(start_date, end_date, method) {
     30 * (em - sm) + (ed - sd);
 };
 
-exports.EDATE = function(start_date, months) {
+exports.EDATE = function (start_date, months) {
   start_date = utils.parseDate(start_date);
 
   if (start_date instanceof Error) {
@@ -4359,10 +4422,10 @@ exports.EDATE = function(start_date, months) {
   months = parseInt(months, 10);
   start_date.setMonth(start_date.getMonth() + months);
 
-  return serial(start_date);
+  return start_date;
 };
 
-exports.EOMONTH = function(start_date, months) {
+exports.EOMONTH = function (start_date, months) {
   start_date = utils.parseDate(start_date);
 
   if (start_date instanceof Error) {
@@ -4373,10 +4436,10 @@ exports.EOMONTH = function(start_date, months) {
   }
   months = parseInt(months, 10);
 
-  return serial(new Date(start_date.getFullYear(), start_date.getMonth() + months + 1, 0));
+  return new Date(start_date.getFullYear(), start_date.getMonth() + months + 1, 0);
 };
 
-exports.HOUR = function(serial_number) {
+exports.HOUR = function (serial_number) {
   serial_number = utils.parseDate(serial_number);
 
   if (serial_number instanceof Error) {
@@ -4393,30 +4456,30 @@ exports.INTERVAL = function (second) {
     second = parseInt(second, 10);
   }
 
-  var year  = Math.floor(second/946080000);
-  second    = second%946080000;
-  var month = Math.floor(second/2592000);
-  second    = second%2592000;
-  var day   = Math.floor(second/86400);
-  second    = second%86400;
+  var year = Math.floor(second / 946080000);
+  second = second % 946080000;
+  var month = Math.floor(second / 2592000);
+  second = second % 2592000;
+  var day = Math.floor(second / 86400);
+  second = second % 86400;
 
-  var hour  = Math.floor(second/3600);
-  second    = second%3600;
-  var min   = Math.floor(second/60);
-  second    = second%60;
-  var sec   = second;
+  var hour = Math.floor(second / 3600);
+  second = second % 3600;
+  var min = Math.floor(second / 60);
+  second = second % 60;
+  var sec = second;
 
-  year  = (year  > 0) ? year  + 'Y' : '';
+  year = (year > 0) ? year + 'Y' : '';
   month = (month > 0) ? month + 'M' : '';
-  day   = (day   > 0) ? day   + 'D' : '';
-  hour  = (hour  > 0) ? hour  + 'H' : '';
-  min   = (min   > 0) ? min   + 'M' : '';
-  sec   = (sec   > 0) ? sec   + 'S' : '';
+  day = (day > 0) ? day + 'D' : '';
+  hour = (hour > 0) ? hour + 'H' : '';
+  min = (min > 0) ? min + 'M' : '';
+  sec = (sec > 0) ? sec + 'S' : '';
 
   return 'P' + year + month + day + 'T' + hour + min + sec;
 };
 
-exports.ISOWEEKNUM = function(date) {
+exports.ISOWEEKNUM = function (date) {
   date = utils.parseDate(date);
 
   if (date instanceof Error) {
@@ -4430,7 +4493,7 @@ exports.ISOWEEKNUM = function(date) {
   return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
 };
 
-exports.MINUTE = function(serial_number) {
+exports.MINUTE = function (serial_number) {
   serial_number = utils.parseDate(serial_number);
 
   if (serial_number instanceof Error) {
@@ -4440,7 +4503,7 @@ exports.MINUTE = function(serial_number) {
   return serial_number.getMinutes();
 };
 
-exports.MONTH = function(serial_number) {
+exports.MONTH = function (serial_number) {
   serial_number = utils.parseDate(serial_number);
 
   if (serial_number instanceof Error) {
@@ -4450,11 +4513,11 @@ exports.MONTH = function(serial_number) {
   return serial_number.getMonth() + 1;
 };
 
-exports.NETWORKDAYS = function(start_date, end_date, holidays) {
+exports.NETWORKDAYS = function (start_date, end_date, holidays) {
   return this.NETWORKDAYS.INTL(start_date, end_date, 1, holidays);
 };
 
-exports.NETWORKDAYS.INTL = function(start_date, end_date, weekend, holidays) {
+exports.NETWORKDAYS.INTL = function (start_date, end_date, weekend, holidays) {
   start_date = utils.parseDate(start_date);
 
   if (start_date instanceof Error) {
@@ -4513,11 +4576,11 @@ exports.NETWORKDAYS.INTL = function(start_date, end_date, weekend, holidays) {
   return total;
 };
 
-exports.NOW = function() {
+exports.NOW = function () {
   return new Date();
 };
 
-exports.SECOND = function(serial_number) {
+exports.SECOND = function (serial_number) {
   serial_number = utils.parseDate(serial_number);
   if (serial_number instanceof Error) {
     return serial_number;
@@ -4526,7 +4589,7 @@ exports.SECOND = function(serial_number) {
   return serial_number.getSeconds();
 };
 
-exports.TIME = function(hour, minute, second) {
+exports.TIME = function (hour, minute, second) {
   hour = utils.parseNumber(hour);
   minute = utils.parseNumber(minute);
   second = utils.parseNumber(second);
@@ -4540,7 +4603,7 @@ exports.TIME = function(hour, minute, second) {
   return (3600 * hour + 60 * minute + second) / 86400;
 };
 
-exports.TIMEVALUE = function(time_text) {
+exports.TIMEVALUE = function (time_text) {
   time_text = utils.parseDate(time_text);
 
   if (time_text instanceof Error) {
@@ -4550,11 +4613,15 @@ exports.TIMEVALUE = function(time_text) {
   return (3600 * time_text.getHours() + 60 * time_text.getMinutes() + time_text.getSeconds()) / 86400;
 };
 
-exports.TODAY = function() {
-  return new Date();
+exports.TODAY = function () {
+  var today = new Date();
+  today.setHours(0);
+  today.setMinutes(0);
+  today.setSeconds(0);
+  return today;
 };
 
-exports.WEEKDAY = function(serial_number, return_type) {
+exports.WEEKDAY = function (serial_number, return_type) {
   serial_number = utils.parseDate(serial_number);
   if (serial_number instanceof Error) {
     return serial_number;
@@ -4567,7 +4634,7 @@ exports.WEEKDAY = function(serial_number, return_type) {
   return WEEK_TYPES[return_type][day];
 };
 
-exports.WEEKNUM = function(serial_number, return_type) {
+exports.WEEKNUM = function (serial_number, return_type) {
   serial_number = utils.parseDate(serial_number);
   if (serial_number instanceof Error) {
     return serial_number;
@@ -4586,11 +4653,11 @@ exports.WEEKNUM = function(serial_number, return_type) {
   return Math.floor(((serial_number - jan) / (1000 * 60 * 60 * 24)) / 7 + 1) + inc;
 };
 
-exports.WORKDAY = function(start_date, days, holidays) {
+exports.WORKDAY = function (start_date, days, holidays) {
   return this.WORKDAY.INTL(start_date, days, 1, holidays);
 };
 
-exports.WORKDAY.INTL = function(start_date, days, weekend, holidays) {
+exports.WORKDAY.INTL = function (start_date, days, weekend, holidays) {
   start_date = utils.parseDate(start_date);
   if (start_date instanceof Error) {
     return start_date;
@@ -4644,7 +4711,7 @@ exports.WORKDAY.INTL = function(start_date, days, weekend, holidays) {
   return start_date;
 };
 
-exports.YEAR = function(serial_number) {
+exports.YEAR = function (serial_number) {
   serial_number = utils.parseDate(serial_number);
 
   if (serial_number instanceof Error) {
@@ -4663,7 +4730,7 @@ function daysBetween(start_date, end_date) {
   return Math.ceil((end_date - start_date) / 1000 / 60 / 60 / 24);
 }
 
-exports.YEARFRAC = function(start_date, end_date, basis) {
+exports.YEARFRAC = function (start_date, end_date, basis) {
   start_date = utils.parseDate(start_date);
   if (start_date instanceof Error) {
     return start_date;
@@ -4695,7 +4762,7 @@ exports.YEARFRAC = function(start_date, end_date, basis) {
       return ((ed + em * 30 + ey * 360) - (sd + sm * 30 + sy * 360)) / 360;
     case 1:
       // Actual/actual
-      var feb29Between = function(date1, date2) {
+      var feb29Between = function (date1, date2) {
         var year1 = date1.getFullYear();
         var mar1year1 = new Date(year1, 2, 1);
         if (isLeapYear(year1) && date1 < mar1year1 && date2 >= mar1year1) {
@@ -13124,6 +13191,15 @@ exports.IF = function(test, then_value, otherwise_value) {
   return test ? then_value : otherwise_value;
 };
 
+exports.IFS = function() {
+  for (var i = 0; i < arguments.length / 2; i++) {
+    if (arguments[i * 2]) {
+      return arguments[i * 2 + 1];
+    }
+  }
+  return error.na;
+};
+
 exports.IFERROR = function(value, valueIfError) {
   if (information.ISERROR(value)) {
     return valueIfError;
@@ -13296,10 +13372,6 @@ exports.COUPPCD = function() {
 };
 
 exports.CUMIPMT = function(rate, periods, value, start, end, type) {
-  // Credits: algorithm inspired by Apache OpenOffice
-  // Credits: Hannes Stiebitzhofer for the translations of function and variable names
-  // Requires exports.FV() and exports.PMT() from exports.js [http://stoic.com/exports/]
-
   rate = utils.parseNumber(rate);
   periods = utils.parseNumber(periods);
   value = utils.parseNumber(value);
@@ -13307,30 +13379,26 @@ exports.CUMIPMT = function(rate, periods, value, start, end, type) {
     return error.value;
   }
 
-  // Return error if either rate, periods, or value are lower than or equal to zero
   if (rate <= 0 || periods <= 0 || value <= 0) {
     return error.num;
   }
 
-  // Return error if start < 1, end < 1, or start > end
   if (start < 1 || end < 1 || start > end) {
     return error.num;
   }
 
-  // Return error if type is neither 0 nor 1
   if (type !== 0 && type !== 1) {
     return error.num;
   }
 
-  // Compute cumulative interest
   var payment = exports.PMT(rate, periods, value, 0, type);
   var interest = 0;
 
   if (start === 1) {
     if (type === 0) {
       interest = -value;
-      start++;
     }
+    start++;
   }
 
   for (var i = start; i <= end; i++) {
@@ -13342,7 +13410,6 @@ exports.CUMIPMT = function(rate, periods, value, start, end, type) {
   }
   interest *= rate;
 
-  // Return cumulative interest
   return interest;
 };
 
@@ -13833,14 +13900,18 @@ exports.NPER = function(rate, payment, present, future, type) {
   present = utils.parseNumber(present);
   future = utils.parseNumber(future);
   type = utils.parseNumber(type);
+
   if (utils.anyIsError(rate, payment, present, future, type)) {
     return error.value;
   }
 
-  // Return number of periods
-  var num = payment * (1 + rate * type) - future * rate;
-  var den = (present * rate + payment * (1 + rate * type));
-  return Math.log(num / den) / Math.log(1 + rate);
+  if (rate === 0) {
+    return (-(present + future) / payment);
+  } else {
+    var num = payment * (1 + rate * type) - future * rate;
+    var den = (present * rate + payment * (1 + rate * type));
+    return Math.log(num / den) / Math.log(1 + rate);
+  }
 };
 
 exports.NPV = function() {
@@ -13984,8 +14055,6 @@ exports.PV = function(rate, periods, payment, future, type) {
 };
 
 exports.RATE = function(periods, payment, present, future, type, guess) {
-  // Credits: rabugento
-
   guess = (guess === undefined) ? 0.01 : guess;
   future = (future === undefined) ? 0 : future;
   type = (type === undefined) ? 0 : type;
@@ -14000,41 +14069,36 @@ exports.RATE = function(periods, payment, present, future, type, guess) {
     return error.value;
   }
 
-  // Set maximum epsilon for end of iteration
   var epsMax = 1e-10;
-
-  // Set maximum number of iterations
-  var iterMax = 50;
-
-  // Implement Newton's method
-  var y, y0, y1, x0, x1 = 0,
-    f = 0,
-    i = 0;
+  var iterMax = 20;
   var rate = guess;
-  if (Math.abs(rate) < epsMax) {
-    y = present * (1 + periods * rate) + payment * (1 + rate * type) * periods + future;
-  } else {
-    f = Math.exp(periods * Math.log(1 + rate));
-    y = present * f + payment * (1 / rate + type) * (f - 1) + future;
-  }
-  y0 = present + payment * periods + future;
-  y1 = present * f + payment * (1 / rate + type) * (f - 1) + future;
-  i = x0 = 0;
-  x1 = rate;
-  while ((Math.abs(y0 - y1) > epsMax) && (i < iterMax)) {
-    rate = (y1 * x0 - y0 * x1) / (y1 - y0);
-    x0 = x1;
-    x1 = rate;
+
+  type = type ? 1 : 0;
+  for (var i = 0; i < iterMax; i++) {
+    if (rate <= -1) {
+      return error.num;
+    }
+    var y, f;
     if (Math.abs(rate) < epsMax) {
       y = present * (1 + periods * rate) + payment * (1 + rate * type) * periods + future;
     } else {
-      f = Math.exp(periods * Math.log(1 + rate));
+      f = Math.pow(1 + rate, periods);
       y = present * f + payment * (1 / rate + type) * (f - 1) + future;
     }
-    y0 = y1;
-    y1 = y;
-    ++i;
+    if (Math.abs(y) < epsMax) {
+      return rate;
+    }
+    var dy;
+    if (Math.abs(rate) < epsMax) {
+      dy = present * periods + payment * type * periods;
+    } else {
+      f = Math.pow(1 + rate, periods);
+      var df = periods * Math.pow(1 + rate, periods - 1);
+      dy = present * df + payment * (1 / rate + type) * df + payment * (-1 / (rate * rate)) * (f - 1);
+    }
+    rate -= y / dy;
   }
+
   return rate;
 };
 
@@ -14190,77 +14254,76 @@ exports.VDB = function() {
   throw new Error('VDB is not implemented');
 };
 
-// TODO needs better support for date
-// exports.XIRR = function(values, dates, guess) {
-//   // Credits: algorithm inspired by Apache OpenOffice
-//
-//   values = utils.parseNumberArray(utils.flatten(values));
-//   dates = utils.parseDateArray(utils.flatten(dates));
-//   guess = utils.parseNumber(guess);
-//
-//   if (utils.anyIsError(values, dates, guess)) {
-//     return error.value;
-//   }
-//
-//   // Calculates the resulting amount
-//   var irrResult = function(values, dates, rate) {
-//     var r = rate + 1;
-//     var result = values[0];
-//     for (var i = 1; i < values.length; i++) {
-//       result += values[i] / Math.pow(r, dateTime.DAYS(dates[i], dates[0]) / 365);
-//     }
-//     return result;
-//   };
-//
-//   // Calculates the first derivation
-//   var irrResultDeriv = function(values, dates, rate) {
-//     var r = rate + 1;
-//     var result = 0;
-//     for (var i = 1; i < values.length; i++) {
-//       var frac = dateTime.DAYS(dates[i], dates[0]) / 365;
-//       result -= frac * values[i] / Math.pow(r, frac + 1);
-//     }
-//     return result;
-//   };
-//
-//   // Check that values contains at least one positive value and one negative value
-//   var positive = false;
-//   var negative = false;
-//   for (var i = 0; i < values.length; i++) {
-//     if (values[i] > 0) {
-//       positive = true;
-//     }
-//     if (values[i] < 0) {
-//       negative = true;
-//     }
-//   }
-//
-//   // Return error if values does not contain at least one positive value and one negative value
-//   if (!positive || !negative) {
-//     return error.num;
-//   }
-//
-//   // Initialize guess and resultRate
-//   guess = guess || 0.1;
-//   var resultRate = guess;
-//
-//   // Set maximum epsilon for end of iteration
-//   var epsMax = 1e-10;
-//
-//   // Implement Newton's method
-//   var newRate, epsRate, resultValue;
-//   var contLoop = true;
-//   do {
-//     resultValue = irrResult(values, dates, resultRate);
-//     newRate = resultRate - resultValue / irrResultDeriv(values, dates, resultRate);
-//     epsRate = Math.abs(newRate - resultRate);
-//     resultRate = newRate;
-//     contLoop = (epsRate > epsMax) && (Math.abs(resultValue) > epsMax);
-//   } while (contLoop);
-//
-//   // Return internal rate of return
-//   return resultRate;
-// };
+exports.XIRR = function(values, dates, guess) {
+  // Credits: algorithm inspired by Apache OpenOffice
+
+  values = utils.parseNumberArray(utils.flatten(values));
+  dates = utils.parseDateArray(utils.flatten(dates));
+  guess = utils.parseNumber(guess);
+
+  if (utils.anyIsError(values, dates, guess)) {
+    return error.value;
+  }
+
+  // Calculates the resulting amount
+  var irrResult = function(values, dates, rate) {
+    var r = rate + 1;
+    var result = values[0];
+    for (var i = 1; i < values.length; i++) {
+      result += values[i] / Math.pow(r, dateTime.DAYS(dates[i], dates[0]) / 365);
+    }
+    return result;
+  };
+
+  // Calculates the first derivation
+  var irrResultDeriv = function(values, dates, rate) {
+    var r = rate + 1;
+    var result = 0;
+    for (var i = 1; i < values.length; i++) {
+      var frac = dateTime.DAYS(dates[i], dates[0]) / 365;
+      result -= frac * values[i] / Math.pow(r, frac + 1);
+    }
+    return result;
+  };
+
+  // Check that values contains at least one positive value and one negative value
+  var positive = false;
+  var negative = false;
+  for (var i = 0; i < values.length; i++) {
+    if (values[i] > 0) {
+      positive = true;
+    }
+    if (values[i] < 0) {
+      negative = true;
+    }
+  }
+
+  // Return error if values does not contain at least one positive value and one negative value
+  if (!positive || !negative) {
+    return error.num;
+  }
+
+  // Initialize guess and resultRate
+  guess = guess || 0.1;
+  var resultRate = guess;
+
+  // Set maximum epsilon for end of iteration
+  var epsMax = 1e-10;
+
+  // Implement Newton's method
+  var newRate, epsRate, resultValue;
+  var contLoop = true;
+  do {
+    resultValue = irrResult(values, dates, resultRate);
+    newRate = resultRate - resultValue / irrResultDeriv(values, dates, resultRate);
+    epsRate = Math.abs(newRate - resultRate);
+    resultRate = newRate;
+    contLoop = (epsRate > epsMax) && (Math.abs(resultValue) > epsMax);
+  } while (contLoop);
+
+  // Return internal rate of return
+  return resultRate;
+};
 
 exports.XNPV = function(rate, values, dates) {
   rate = utils.parseNumber(rate);
@@ -14311,6 +14374,8 @@ exports.MATCH = function(lookupValue, lookupArray, matchType) {
   if (!(lookupArray instanceof Array)) {
     return error.na;
   }
+
+  lookupArray = utils.flatten(lookupArray);
 
   if (matchType !== -1 && matchType !== 0 && matchType !== 1) {
     return error.na;
@@ -14364,17 +14429,21 @@ exports.VLOOKUP = function (needle, table, index, rangeLookup) {
     return error.na;
   }
 
-  rangeLookup = rangeLookup || false;
+  rangeLookup = !(rangeLookup === 0 || rangeLookup === false);
+  var result = error.na;
   for (var i = 0; i < table.length; i++) {
     var row = table[i];
-    if ((!rangeLookup && row[0] === needle) ||
-      ((row[0] === needle) ||
-        (rangeLookup && typeof row[0] === "string" && row[0].toLowerCase().indexOf(needle.toLowerCase()) !== -1))) {
-      return (index < (row.length + 1) ? row[index - 1] : error.ref);
+
+    if (row[0] === needle) {
+      result = (index < (row.length + 1) ? row[index - 1] : error.ref);
+      break;
+    } else if ((rangeLookup && row[0] <= needle) ||
+      (rangeLookup && typeof row[0] === "string" && row[0].localeCompare(needle) < 0)) {
+      result = (index < (row.length + 1) ? row[index - 1] : error.ref);
     }
   }
 
-  return error.na;
+  return result;
 };
 
 exports.HLOOKUP = function (needle, table, index, rangeLookup) {
@@ -14396,6 +14465,32 @@ exports.HLOOKUP = function (needle, table, index, rangeLookup) {
   }
 
   return error.na;
+};
+
+exports.LOOKUP = function (searchCriterion, array, resultArray) {
+  array = utils.flatten(array);
+  resultArray = utils.flatten(resultArray);
+
+  var index = array.indexOf(searchCriterion);
+
+  if (index > -1) {
+    return resultArray[index];
+  } else {
+    return resultArray[resultArray.length - 1];
+  }
+};
+
+exports.INDEX = function (cellRange, rowNumber, columnNumber) {
+  columnNumber = columnNumber ? columnNumber : 1;
+  rowNumber = rowNumber ? rowNumber : 1;
+
+  if (rowNumber <= cellRange.length) {
+    if (columnNumber <= cellRange[rowNumber - 1].length) {
+      return cellRange[rowNumber - 1][columnNumber - 1];
+    }
+  }
+
+  return error.ref;
 };
 
 

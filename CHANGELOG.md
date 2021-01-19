@@ -1,1 +1,1 @@
-All releases are described at https://github.com/handsontable/formula-parser/releases
+All releases are described at https://github.com/nikazooz/formula-parser/releases
