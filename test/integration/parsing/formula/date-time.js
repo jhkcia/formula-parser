@@ -39,6 +39,8 @@ describe('.parse() date & time formulas', () => {
     expect(parser.parse('DAYS(1)')).toMatchObject({error: '#VALUE!', result: null});
     expect(parser.parse('DAYS(1, 6)')).toMatchObject({error: null, result: -5});
     expect(parser.parse('DAYS("1/2/2000", "1/10/2001")')).toMatchObject({error: null, result: -374});
+    expect(parser.parse('DAYS("2/2/2021", "2/2/2021")')).toMatchObject({error: null, result: 0});
+    expect(parser.parse('DAYS(NOW(), TODAY())')).toMatchObject({error: null, result: 0});
   });
 
   it('DAYS360', () => {
