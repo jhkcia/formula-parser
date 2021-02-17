@@ -77,6 +77,7 @@ describe('.parse() text formulas', () => {
     expect(parser.parse('LEN(TRUE)')).toMatchObject({error: '#VALUE!', result: null});
     expect(parser.parse('LEN(1023)')).toMatchObject({error: '#VALUE!', result: null});
     expect(parser.parse('LEN("Foo Bar")')).toMatchObject({error: null, result: 7});
+    expect(parser.parse('LEN(NULL)')).toMatchObject({error: null, result: 0});
   });
 
   it('LOWER', () => {
