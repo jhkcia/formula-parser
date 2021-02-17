@@ -3667,6 +3667,10 @@ exports.LEN = function(text) {
     return text ? text.length : 0;
   }
 
+  if (text === null || text.length === 0) {
+    return 0;
+  }
+
   if (text.length) {
     return text.length;
   }
@@ -4092,6 +4096,10 @@ exports.ISERROR = function(value) {
 };
 
 exports.ISEVEN = function(number) {
+  if (typeof number !== 'number' && isNaN(parseFloat(number))) {
+    return error.error;
+  }
+
   return (Math.floor(Math.abs(number)) & 1) ? false : true;
 };
 
@@ -4117,6 +4125,10 @@ exports.ISNUMBER = function(value) {
 };
 
 exports.ISODD = function(number) {
+  if (typeof number !== 'number' && isNaN(parseFloat(number))) {
+    return error.error;
+  }
+
   return (Math.floor(Math.abs(number)) & 1) ? true : false;
 };
 
