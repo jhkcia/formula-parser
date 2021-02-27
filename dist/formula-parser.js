@@ -3663,16 +3663,16 @@ exports.LEN = function(text) {
     return error.error;
   }
 
+  if (text === null) {
+    return 0;
+  }
+
   if (typeof text === 'string') {
     return text ? text.length : 0;
   }
 
-  if (text === null || text.length === 0) {
-    return 0;
-  }
-
-  if (text.length) {
-    return text.length;
+  if (Array.isArray(text)) {
+    return error.error
   }
 
   return error.value;
@@ -4096,10 +4096,6 @@ exports.ISERROR = function(value) {
 };
 
 exports.ISEVEN = function(number) {
-  if (typeof number !== 'number' && isNaN(parseFloat(number))) {
-    return error.error;
-  }
-
   return (Math.floor(Math.abs(number)) & 1) ? false : true;
 };
 
@@ -4125,10 +4121,6 @@ exports.ISNUMBER = function(value) {
 };
 
 exports.ISODD = function(number) {
-  if (typeof number !== 'number' && isNaN(parseFloat(number))) {
-    return error.error;
-  }
-
   return (Math.floor(Math.abs(number)) & 1) ? true : false;
 };
 
@@ -4546,8 +4538,22 @@ exports.NETWORKDAYS.INTL = function (start_date, end_date, weekend, holidays) {
   if (end_date instanceof Error) {
     return end_date;
   }
+  
+  var isMask = false;
+  var maskDays = [];
+  var maskIndex = [1, 2, 3, 4, 5, 6, 0]
+  var maskRegex = new RegExp('^[0|1]{7}$');
+  
   if (weekend === undefined) {
     weekend = WEEKEND_TYPES[1];
+  } else if (typeof weekend === 'string' && maskRegex.test(weekend)) {
+    isMask = true;
+    weekend = weekend.split('');
+    for (i = 0; i < weekend.length; i++) {
+      if (weekend[i] == 1) {
+        maskDays.push(maskIndex[i]);
+      }
+    }
   } else {
     weekend = WEEKEND_TYPES[weekend];
   }
@@ -4572,10 +4578,7 @@ exports.NETWORKDAYS.INTL = function (start_date, end_date, weekend, holidays) {
   var day = start_date;
   for (i = 0; i < days; i++) {
     var d = (new Date().getTimezoneOffset() > 0) ? day.getUTCDay() : day.getDay();
-    var dec = false;
-    if (d === weekend[0] || d === weekend[1]) {
-      dec = true;
-    }
+    var dec = isMask ? maskDays.includes(d) : (d === weekend[0] || d === weekend[1]);
     for (var j = 0; j < holidays.length; j++) {
       var holiday = holidays[j];
       if (holiday.getDate() === day.getDate() &&

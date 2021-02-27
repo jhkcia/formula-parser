@@ -1,6 +1,6 @@
 {
   "name": "@startinfinity/hot-formula-parser",
-  "version": "5.0.6",
+  "version": "5.0.7",
   "description": "Formula parser",
   "main": "./index",
   "module": "./index.mjs",
@@ -65,7 +65,7 @@
     "webpack-cli": "^4.2.0"
   },
   "dependencies": {
-    "@formulajs/formulajs": "git+https://github.com/nikazooz/formulajs.git#fix/isevan-isodd-and-len",
+    "@formulajs/formulajs": "^2.6.5",
     "tiny-emitter": "^2.1.0"
   },
   "jest": {

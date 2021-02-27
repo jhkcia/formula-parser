@@ -28,7 +28,7 @@ describe('.parse() information formulas', () => {
     expect(parser.parse('ISEVEN(1)')).toMatchObject({error: null, result: false});
     expect(parser.parse('ISEVEN(2)')).toMatchObject({error: null, result: true});
     expect(parser.parse('ISEVEN(2.5)')).toMatchObject({error: null, result: true});
-    expect(parser.parse('ISEVEN("A")')).toMatchObject({error: '#ERROR!', result: null});
+    expect(parser.parse('ISEVEN(NULL)')).toMatchObject({error: null, result: true});
   });
 
   it('ISLOGICAL', () => {
@@ -59,7 +59,7 @@ describe('.parse() information formulas', () => {
     expect(parser.parse('ISODD(1)')).toMatchObject({error: null, result: true});
     expect(parser.parse('ISODD(2)')).toMatchObject({error: null, result: false});
     expect(parser.parse('ISODD(2.5)')).toMatchObject({error: null, result: false});
-    expect(parser.parse('ISODD("A")')).toMatchObject({ error: '#ERROR!', result: null });
+    expect(parser.parse('ISODD(NULL)')).toMatchObject({error: null, result: false});
   });
 
   it('ISTEXT', () => {
