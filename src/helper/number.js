@@ -4,6 +4,13 @@
  * @param {String|Number} number
  * @returns {*}
  */
+
+function dateToSerialNumber(date) {
+  let r =  25569.0 + ((date.getTime() - (date.getTimezoneOffset() * 60 * 1000)) / (1000 * 60 * 60 * 24)); 
+  r = Math.round(r * 10000000000) / 10000000000;
+  return r;
+}
+
 export function toNumber(number) {
   let result;
 
@@ -12,6 +19,8 @@ export function toNumber(number) {
 
   } else if (typeof number === 'string') {
     result = number.indexOf('.') > -1 ? parseFloat(number) : parseInt(number, 10);
+  } else if (number instanceof Date) {
+    result = dateToSerialNumber(number);
   }
 
   return result;
