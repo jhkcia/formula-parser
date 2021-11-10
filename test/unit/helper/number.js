@@ -18,9 +18,9 @@ describe('.toNumber()', () => {
     expect(toNumber(new Date('7/5/2011 4:20:00'))).toBe(40729.1805555556);
     expect(toNumber(new Date('10/28/2021'))).toBe(44497);
     expect(toNumber(new Date('10/28/2021 06:00:00'))).toBe(44497.25);
-    // expect(toNumber(new Date('1/1/1900'))).toBe(1);
-    // expect(toNumber(new Date('3/1/1900'))).toBe(61);
-    // expect(toNumber(new Date('1/1/1945'))).toBe(16438);
+    expect(toNumber(new Date('1/1/1900'))).toBe(1);
+    expect(toNumber(new Date('3/1/1900'))).toBe(61);
+    expect(toNumber(new Date('1/1/1945'))).toBe(16438);
   });
 });
 
