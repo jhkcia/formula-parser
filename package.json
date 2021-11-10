@@ -65,7 +65,7 @@
     "webpack-cli": "^4.2.0"
   },
   "dependencies": {
-    "@formulajs/formulajs": "git+https://github.com/jhkcia/formulajs.git#fix-serial-date",
+    "@formulajs/formulajs": "^2.6.5",
     "tiny-emitter": "^2.1.0"
   },
   "jest": {
