@@ -472,6 +472,38 @@ exports.invertNumber = invertNumber;
  * @param {String|Number} number
  * @returns {*}
  */
+function dateToSerialNumber(date) {
+  var year = date.getFullYear();
+  var month = date.getMonth() + 1;
+  var day = date.getDate();
+  var excel1900isLeapYear = true;
+
+  if (year == 1900 && month <= 2) {
+    excel1900isLeapYear = false;
+  }
+
+  var myexcelBaseDate = 2415020;
+
+  if (month > 2) {
+    month -= 3;
+  } else {
+    month += 9;
+    --year;
+  } //    Calculate the Julian Date, then subtract the Excel base date (JD 2415020 = 31-Dec-1899 Giving Excel Date of 0)
+
+
+  var century = Math.floor(year / 100);
+  var decade = year % 100;
+  var excelDate = Math.floor(146097 * century / 4) + Math.floor(1461 * decade / 4) + Math.floor((153 * month + 2) / 5) + day + 1721119 - myexcelBaseDate + excel1900isLeapYear;
+  var hours = date.getHours();
+  var minutes = date.getMinutes();
+  var seconds = date.getSeconds();
+  var excelTime = (hours * 3600 + minutes * 60 + seconds) / 86400;
+  var result = excelDate + excelTime;
+  result = Math.round(r * 10000000000) / 10000000000;
+  return result;
+}
+
 function toNumber(number) {
   var result;
 
@@ -479,6 +511,8 @@ function toNumber(number) {
     result = number;
   } else if (typeof number === 'string') {
     result = number.indexOf('.') > -1 ? parseFloat(number) : parseInt(number, 10);
+  } else if (number instanceof Date) {
+    result = dateToSerialNumber(number);
   }
 
   return result;

@@ -30,7 +30,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nikazooz/formula-parser.git"
+    "url": "https://github.com/jhkcia/formula-parser.git"
   },
   "keywords": [
     "formula",
@@ -43,9 +43,9 @@
   "author": "Nenad Živanović <nenad@zoozdev.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/nikazooz/formula-parser/issues"
+    "url": "https://github.com/jhkcia/formula-parser/issues"
   },
-  "homepage": "https://github.com/nikazooz/formula-parser",
+  "homepage": "https://github.com/jhkcia/formula-parser",
   "devDependencies": {
     "@babel/cli": "^7.12.10",
     "@babel/core": "^7.12.10",
