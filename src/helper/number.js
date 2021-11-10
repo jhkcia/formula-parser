@@ -36,7 +36,7 @@ function dateToSerialNumber(date) {
 
   let result = excelDate + excelTime;
 
-  result = Math.round(r * 10000000000) / 10000000000;
+  result = Math.round(result * 10000000000) / 10000000000;
 
   return result;
 }
