@@ -11,12 +11,12 @@ describe('.parse() text formulas', () => {
   });
 
   it('CHAR', () => {
-    expect(parser.parse('CHAR()')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('CHAR()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('CHAR(33)')).toMatchObject({error: null, result: '!'});
   });
 
   it('CLEAN', () => {
-    expect(parser.parse('CLEAN()')).toMatchObject({error: null, result: ''});
+    expect(parser.parse('CLEAN()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('CLEAN(CHAR(9)&"Monthly report"&CHAR(10))')).toMatchObject({error: null, result: 'Monthly report'});
   });
 
@@ -26,7 +26,7 @@ describe('.parse() text formulas', () => {
   });
 
   it('CONCATENATE', () => {
-    expect(parser.parse('CONCATENATE()')).toMatchObject({error: null, result: ''});
+    expect(parser.parse('CONCATENATE()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('CONCATENATE("a")')).toMatchObject({error: null, result: 'a'});
     expect(parser.parse('CONCATENATE("a", 1)')).toMatchObject({error: null, result: 'a1'});
     expect(parser.parse('CONCATENATE("a", 1, TRUE)')).toMatchObject({error: null, result: 'a1TRUE'});
@@ -43,14 +43,14 @@ describe('.parse() text formulas', () => {
     expect(parser.parse('EXACT(1100)')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('EXACT(1100, -2)')).toMatchObject({error: null, result: false});
     expect(parser.parse('EXACT(1100, 1100)')).toMatchObject({error: null, result: true});
-    expect(parser.parse('EXACT(1100, "1100")')).toMatchObject({error: null, result: false});
+    expect(parser.parse('EXACT(1100, "1100")')).toMatchObject({error: null, result: true});
   });
 
   it('FIND', () => {
     expect(parser.parse('FIND()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('FIND("o")')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('FIND("o", "FooBar")')).toMatchObject({error: null, result: 2});
-    expect(parser.parse('FIND("O", "FooBar")')).toMatchObject({error: null, result: 0});
+    expect(parser.parse('FIND("O", "FooBar")')).toMatchObject({error: '#VALUE!', result: null});
   });
 
   xit('FIXED', () => {
@@ -67,35 +67,35 @@ describe('.parse() text formulas', () => {
   });
 
   it('LEFT', () => {
-    expect(parser.parse('LEFT()')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('LEFT()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('LEFT("Foo Bar")')).toMatchObject({error: null, result: 'F'});
     expect(parser.parse('LEFT("Foo Bar", 3)')).toMatchObject({error: null, result: 'Foo'});
   });
 
   it('LEN', () => {
-    expect(parser.parse('LEN()')).toMatchObject({error: '#ERROR!', result: null});
-    expect(parser.parse('LEN(TRUE)')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('LEN(1023)')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('LEN()')).toMatchObject({error: '#N/A', result: null});
+    expect(parser.parse('LEN(TRUE)')).toMatchObject({error: null, result: 4});
+    expect(parser.parse('LEN(1023)')).toMatchObject({error: null, result: 4});
     expect(parser.parse('LEN("Foo Bar")')).toMatchObject({error: null, result: 7});
     expect(parser.parse('LEN(NULL)')).toMatchObject({error: null, result: 0});
   });
 
   it('LOWER', () => {
-    expect(parser.parse('LOWER()')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('LOWER()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('LOWER("")')).toMatchObject({error: null, result: ''});
     expect(parser.parse('LOWER("Foo Bar")')).toMatchObject({error: null, result: 'foo bar'});
   });
 
   it('MID', () => {
-    expect(parser.parse('MID()')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('MID("")')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('MID("Foo Bar", 2)')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('MID()')).toMatchObject({error: '#N/A', result: null});
+    expect(parser.parse('MID("")')).toMatchObject({error: '#N/A', result: null});
+    expect(parser.parse('MID("Foo Bar", 2)')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('MID("Foo Bar", 2, 5)')).toMatchObject({error: null, result: 'oo Ba'});
   });
 
   it('PROPER', () => {
-    expect(parser.parse('PROPER()')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('PROPER("")')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('PROPER()')).toMatchObject({error: '#N/A', result: null});
+    expect(parser.parse('PROPER("")')).toMatchObject({error: null, result: ''});
     expect(parser.parse('PROPER(TRUE)')).toMatchObject({error: null, result: 'True'});
     expect(parser.parse('PROPER(1234)')).toMatchObject({error: null, result: '1234'});
     expect(parser.parse('PROPER("foo bar")')).toMatchObject({error: null, result: 'Foo Bar'});
@@ -123,16 +123,16 @@ describe('.parse() text formulas', () => {
   });
 
   it('REPLACE', () => {
-    expect(parser.parse('REPLACE()')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('REPLACE("foo bar")')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('REPLACE("foo bar", 2)')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('REPLACE("foo bar", 2, 5)')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('REPLACE()')).toMatchObject({error: '#N/A', result: null});
+    expect(parser.parse('REPLACE("foo bar")')).toMatchObject({error: '#N/A', result: null});
+    expect(parser.parse('REPLACE("foo bar", 2)')).toMatchObject({error: '#N/A', result: null});
+    expect(parser.parse('REPLACE("foo bar", 2, 5)')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('REPLACE("foo bar", 2, 5, "*")')).toMatchObject({error: null, result: 'f*r'});
   });
 
   it('REPT', () => {
-    expect(parser.parse('REPT()')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('REPT("foo ")')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('REPT()')).toMatchObject({error: '#N/A', result: null});
+    expect(parser.parse('REPT("foo ")')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('REPT("foo ", 5)')).toMatchObject({error: null, result: 'foo foo foo foo foo '});
   });
 
@@ -143,8 +143,8 @@ describe('.parse() text formulas', () => {
   });
 
   it('SEARCH', () => {
-    expect(parser.parse('SEARCH()')).toMatchObject({error: '#VALUE!', result: null});
-    expect(parser.parse('SEARCH("bar")')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('SEARCH()')).toMatchObject({error: '#N/A', result: null});
+    expect(parser.parse('SEARCH("bar")')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('SEARCH("bar", "foo bar")')).toMatchObject({error: null, result: 5});
   });
 
@@ -161,7 +161,7 @@ describe('.parse() text formulas', () => {
   });
 
   it('T', () => {
-    expect(parser.parse('T()')).toMatchObject({error: null, result: ''});
+    expect(parser.parse('T()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('T(TRUE)')).toMatchObject({error: null, result: ''});
     expect(parser.parse('T(9.887)')).toMatchObject({error: null, result: ''});
     expect(parser.parse('T("foo bar baz")')).toMatchObject({error: null, result: 'foo bar baz'});
@@ -175,14 +175,14 @@ describe('.parse() text formulas', () => {
   });
 
   it('TRIM', () => {
-    expect(parser.parse('TRIM()')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('TRIM()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('TRIM("")')).toMatchObject({error: null, result: ''});
     expect(parser.parse('TRIM("     ")')).toMatchObject({error: null, result: ''});
     expect(parser.parse('TRIM("   foo  ")')).toMatchObject({error: null, result: 'foo'});
   });
 
   it('UNICHAR', () => {
-    expect(parser.parse('UNICHAR()')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('UNICHAR()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('UNICHAR(33)')).toMatchObject({error: null, result: '!'});
   });
 
@@ -192,7 +192,7 @@ describe('.parse() text formulas', () => {
   });
 
   it('UPPER', () => {
-    expect(parser.parse('UPPER()')).toMatchObject({error: '#VALUE!', result: null});
+    expect(parser.parse('UPPER()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('UPPER("foo Bar")')).toMatchObject({error: null, result: 'FOO BAR'});
   });
 

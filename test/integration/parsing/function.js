@@ -26,7 +26,7 @@ describe('.parse() custom function', () => {
   });
 
   it('should evaluate function with arguments passed as an stringified array', () => {
-    expect(parser.parse('SUM([])')).toMatchObject({error: null, result: 0});
+    expect(parser.parse('SUM([])')).toMatchObject({error: '#VALUE!', result: null}); //maybe #N/A
     expect(parser.parse('SUM([1])')).toMatchObject({error: null, result: 1});
     expect(parser.parse('SUM([1,2,3])')).toMatchObject({error: null, result: 6});
   });

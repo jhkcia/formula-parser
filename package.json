@@ -65,7 +65,7 @@
     "webpack-cli": "^4.2.0"
   },
   "dependencies": {
-    "@formulajs/formulajs": "^2.6.5",
+    "@startinfinity/formulajs": "^2.10.0",
     "tiny-emitter": "^2.1.0"
   },
   "jest": {
