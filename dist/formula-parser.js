@@ -218,14 +218,31 @@ exports.parseBool = function(bool) {
 };
 
 exports.parseNumber = function(string) {
-  if (string === undefined || string === '') {
-    return error.value;
+  if (string instanceof Error) {
+    return string;
+  }
+  if (string === undefined || string === null || string === '') {
+    return 0;
+  }
+  if (typeof string === "boolean") {
+    string = +string;
   }
   if (!isNaN(string)) {
     return parseFloat(string);
   }
 
   return error.value;
+};
+
+exports.parseString = function(string) {
+  if (string instanceof Error) {
+    return string;
+  }
+  if (string === undefined || string === null) {
+    return '';
+  }
+
+  return string.toString();
 };
 
 exports.parseNumberArray = function(arr) {
@@ -238,8 +255,11 @@ exports.parseNumberArray = function(arr) {
   var parsed;
 
   while (len--) {
+    if (arr[len] instanceof Error) {
+      return arr[len];
+    }
     parsed = exports.parseNumber(arr[len]);
-    if (parsed === error.value) {
+    if (parsed instanceof Error) {
       return parsed;
     }
     arr[len] = parsed;
@@ -268,20 +288,45 @@ exports.parseMatrix = function(matrix) {
   return matrix;
 };
 
-var d1900 = new Date(Date.UTC(1900, 0, 1));
-exports.parseDate = function(date) {
+function serialNumberToDate(serial) {
+  if (serial < 60) {
+    serial += 1;
+  }
+  var utc_days = Math.floor(serial - 25569);
+  var utc_value = utc_days * 86400;
+  var date_info = new Date(utc_value * 1000);
+
+  var fractional_day = serial - Math.floor(serial) + 0.0000001;
+
+  var total_seconds = Math.floor(86400 * fractional_day);
+
+  var seconds = total_seconds % 60;
+
+  total_seconds -= seconds;
+
+  var hours = Math.floor(total_seconds / (60 * 60));
+  var minutes = Math.floor(total_seconds / 60) % 60;
+  var days = date_info.getDate();
+  var month = date_info.getMonth();
+
+  if (serial >= 60 && serial < 61) {
+    var days = 29;
+    var month = 1;
+  }
+
+  return new Date(date_info.getFullYear(), month, days, hours, minutes, seconds);
+}
+
+exports.parseDate = function (date) {
   if (!isNaN(date)) {
     if (date instanceof Date) {
       return new Date(date);
     }
-    var d = parseInt(date, 10);
-    if (d < 0) {
+    var d = parseFloat(date);
+    if (d < 0 || d >= 2958466) {
       return error.num;
     }
-    if (d <= 60) {
-      return new Date(d1900.getTime() + (d - 1) * 86400000);
-    }
-    return new Date(d1900.getTime() + (d - 2) * 86400000);
+    return serialNumberToDate(d);
   }
   if (typeof date === 'string') {
     date = new Date(date);
@@ -305,10 +350,33 @@ exports.parseDateArray = function(arr) {
   return arr;
 };
 
+exports.anyError = function() {
+  for (var n = 0; n < arguments.length; n++) {
+    if (arguments[n] instanceof Error) {
+      return arguments[n];
+    }
+  }
+  return undefined;
+};
+
+exports.isDefined = function (arg) {
+  return arg !== undefined && arg !== null;
+};
+
 exports.anyIsError = function() {
   var n = arguments.length;
   while (n--) {
     if (arguments[n] instanceof Error) {
+      return true;
+    }
+  }
+  return false;
+};
+
+exports.anyIsString = function() {
+  var n = arguments.length;
+  while (n--) {
+    if (typeof arguments[n] === 'string') {
       return true;
     }
   }
@@ -540,6 +608,9 @@ var information = __webpack_require__(8);
 var evalExpression = __webpack_require__(7);
 
 exports.ABS = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -550,6 +621,9 @@ exports.ABS = function(number) {
 };
 
 exports.ACOS = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -564,6 +638,9 @@ exports.ACOS = function(number) {
 };
 
 exports.ACOSH = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -578,6 +655,9 @@ exports.ACOSH = function(number) {
 };
 
 exports.ACOT = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -588,6 +668,9 @@ exports.ACOT = function(number) {
 };
 
 exports.ACOTH = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -651,6 +734,16 @@ exports.AGGREGATE = function(function_num, options, ref1, ref2) {
 };
 
 exports.ARABIC = function(text) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+  if (text === undefined || text === null) {
+    return 0;
+  }
+  if (text instanceof Error) {
+    return text;
+  }
+  text = text.toUpperCase();
   // Credits: Rafa? Kukawski
   if (!/^M*(?:D?C{0,3}|C[MD])(?:L?X{0,3}|X[CL])(?:V?I{0,3}|I[XV])$/.test(text)) {
     return error.value;
@@ -677,6 +770,9 @@ exports.ARABIC = function(text) {
 };
 
 exports.ASIN = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -691,6 +787,9 @@ exports.ASIN = function(number) {
 };
 
 exports.ASINH = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -699,6 +798,9 @@ exports.ASINH = function(number) {
 };
 
 exports.ATAN = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -707,15 +809,22 @@ exports.ATAN = function(number) {
 };
 
 exports.ATAN2 = function(number_x, number_y) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number_x = utils.parseNumber(number_x);
   number_y = utils.parseNumber(number_y);
-  if (utils.anyIsError(number_x, number_y)) {
-    return error.value;
+  var anyError = utils.anyError(number_x, number_y);
+  if (anyError) {
+    return anyError;
   }
   return Math.atan2(number_x, number_y);
 };
 
 exports.ATANH = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -730,32 +839,46 @@ exports.ATANH = function(number) {
 };
 
 exports.BASE = function(number, radix, min_length) {
-  min_length = min_length || 0;
-
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   radix = utils.parseNumber(radix);
   min_length = utils.parseNumber(min_length);
-  if (utils.anyIsError(number, radix, min_length)) {
-    return error.value;
+  var anyError = utils.anyError(number, radix, min_length);
+  if (anyError) {
+    return anyError;
   }
-  min_length = (min_length === undefined) ? 0 : min_length;
+  if (radix === 0) {
+    return error.num;
+  }
   var result = number.toString(radix);
   return new Array(Math.max(min_length + 1 - result.length, 0)).join('0') + result;
 };
 
 exports.CEILING = function(number, significance, mode) {
-  significance = (significance === undefined) ? 1 : Math.abs(significance);
-  mode = mode || 0;
+  if (arguments.length !== 2) {
+    return error.na;
+  }
 
+  return exports.CEILING.MATH(number, significance)
+};
+
+exports.CEILING.MATH  = function(number, significance, mode) {
+  if(arguments.length<1 || arguments.length>3){
+    return error.na;
+  }
   number = utils.parseNumber(number);
   significance = utils.parseNumber(significance);
   mode = utils.parseNumber(mode);
-  if (utils.anyIsError(number, significance, mode)) {
-    return error.value;
+  var anyError = utils.anyError(number, significance, mode);
+  if (anyError) {
+    return anyError;
   }
   if (significance === 0) {
     return 0;
   }
+  significance = Math.abs(significance);
   var precision = -Math.floor(Math.log(significance) / Math.log(10));
   if (number >= 0) {
     return exports.ROUND(Math.ceil(number / significance) * significance, precision);
@@ -768,29 +891,44 @@ exports.CEILING = function(number, significance, mode) {
   }
 };
 
-exports.CEILING.MATH = exports.CEILING;
-
-exports.CEILING.PRECISE = exports.CEILING;
+exports.CEILING.PRECISE = exports.CEILING.MATH;
 
 exports.COMBIN = function(number, number_chosen) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   number_chosen = utils.parseNumber(number_chosen);
-  if (utils.anyIsError(number, number_chosen)) {
-    return error.value;
+  var anyError = utils.anyError(number, number_chosen);
+  if (anyError) {
+    return anyError;
+  }
+  if (number < number_chosen) {
+    return error.num;
   }
   return exports.FACT(number) / (exports.FACT(number_chosen) * exports.FACT(number - number_chosen));
 };
 
 exports.COMBINA = function(number, number_chosen) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   number_chosen = utils.parseNumber(number_chosen);
-  if (utils.anyIsError(number, number_chosen)) {
-    return error.value;
+  var anyError = utils.anyError(number, number_chosen);
+  if (anyError) {
+    return anyError;
+  }
+  if (number < number_chosen) {
+    return error.num;
   }
   return (number === 0 && number_chosen === 0) ? 1 : exports.COMBIN(number + number_chosen - 1, number - 1);
 };
 
 exports.COS = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -799,6 +937,9 @@ exports.COS = function(number) {
 };
 
 exports.COSH = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -807,47 +948,84 @@ exports.COSH = function(number) {
 };
 
 exports.COT = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
+  }
+  if (number === 0) {
+    return error.div0;
   }
   return 1 / Math.tan(number);
 };
 
 exports.COTH = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
+  }
+  if (number === 0) {
+    return error.div0;
   }
   var e2 = Math.exp(2 * number);
   return (e2 + 1) / (e2 - 1);
 };
 
 exports.CSC = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
+  }
+  if (number === 0) {
+    return error.div0;
   }
   return 1 / Math.sin(number);
 };
 
 exports.CSCH = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
+  }
+  if (number === 0) {
+    return error.div0;
   }
   return 2 / (Math.exp(number) - Math.exp(-number));
 };
 
 exports.DECIMAL = function(number, radix) {
-  if (arguments.length < 1) {
-    return error.value;
+  if (arguments.length !== 2) {
+    return error.na;
+  }
+
+  number = utils.parseNumber(number);
+  radix = utils.parseNumber(radix);
+  var anyError = utils.anyError(number, radix);
+  if (anyError) {
+    return anyError;
+  }
+  if (radix === 0) {
+    return error.num;
   }
 
   return parseInt(number, radix);
 };
 
 exports.DEGREES = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -856,19 +1034,23 @@ exports.DEGREES = function(number) {
 };
 
 exports.EVEN = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
   }
-  return exports.CEILING(number, -2, -1);
+  return exports.CEILING.MATH(number, -2, -1);
 };
 
 exports.EXP = function(number) {
-  if (arguments.length < 1) {
+  if (arguments.length !== 1) {
     return error.na;
   }
-  if (typeof number !== 'number' || arguments.length > 1) {
-    return error.error;
+  number = utils.parseNumber(number);
+  if (number instanceof Error) {
+    return number;
   }
 
   number = Math.exp(number);
@@ -878,6 +1060,9 @@ exports.EXP = function(number) {
 
 var MEMOIZED_FACT = [];
 exports.FACT = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -894,6 +1079,9 @@ exports.FACT = function(number) {
 };
 
 exports.FACTDOUBLE = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -907,16 +1095,20 @@ exports.FACTDOUBLE = function(number) {
 };
 
 exports.FLOOR = function(number, significance) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   significance = utils.parseNumber(significance);
-  if (utils.anyIsError(number, significance)) {
-    return error.value;
+  var anyError = utils.anyError(number, significance);
+  if (anyError) {
+    return anyError;
   }
   if (significance === 0) {
     return 0;
   }
 
-  if (!(number > 0 && significance > 0) && !(number < 0 && significance < 0)) {
+  if (!(number >= 0 && significance > 0) && !(number <= 0 && significance < 0)) {
     return error.num;
   }
 
@@ -931,14 +1123,20 @@ exports.FLOOR = function(number, significance) {
 
 //TODO: Verify
 exports.FLOOR.MATH = function(number, significance, mode) {
-  significance = (significance === undefined) ? 1 : significance;
-  mode = (mode === undefined) ? 0 : mode;
+  if (arguments.length < 1 || arguments.length > 3) {
+    return error.na;
+  }
+  if (significance instanceof Error) {
+    return significance;
+  }
+  significance = (significance === undefined) ? 0 : significance;
 
   number = utils.parseNumber(number);
   significance = utils.parseNumber(significance);
   mode = utils.parseNumber(mode);
-  if (utils.anyIsError(number, significance, mode)) {
-    return error.value;
+  var anyError = utils.anyError(number, significance, mode);
+  if (anyError) {
+    return anyError;
   }
   if (significance === 0) {
     return 0;
@@ -959,6 +1157,9 @@ exports.FLOOR.PRECISE = exports.FLOOR.MATH;
 
 // adapted http://rosettacode.org/wiki/Greatest_common_divisor#JavaScript
 exports.GCD = function() {
+  if (arguments.length < 1) {
+    return error.na;
+  }
   var range = utils.parseNumberArray(utils.flatten(arguments));
   if (range instanceof Error) {
     return range;
@@ -983,6 +1184,9 @@ exports.GCD = function() {
 
 
 exports.INT = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -992,10 +1196,13 @@ exports.INT = function(number) {
 
 //TODO: verify
 exports.ISO = {
-  CEILING: exports.CEILING
+  CEILING: exports.CEILING.MATH
 };
 
 exports.LCM = function() {
+  if (arguments.length == 0) {
+    return error.na;
+  }
   // Credits: Jonas Raoni Soares Silva
   var o = utils.parseNumberArray(utils.flatten(arguments));
   if (o instanceof Error) {
@@ -1003,6 +1210,9 @@ exports.LCM = function() {
   }
   for (var i, j, n, d, r = 1;
        (n = o.pop()) !== undefined;) {
+    if (n === 0) {
+      return 0;
+    }
     while (n > 1) {
       if (n % 2) {
         for (i = 3, j = Math.floor(Math.sqrt(n)); i <= j && n % i; i += 2) {
@@ -1022,9 +1232,15 @@ exports.LCM = function() {
 };
 
 exports.LN = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
+  }
+  if (number === 0) {
+    return error.num;
   }
   return Math.log(number);
 };
@@ -1046,28 +1262,47 @@ exports.LOG2E = function() {
 };
 
 exports.LOG = function(number, base) {
-  number = utils.parseNumber(number);
-  base = base ? utils.parseNumber(base) : 10;
-  if (utils.anyIsError(number, base)) {
-    return error.value;
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
   }
-  base = (base === undefined) ? 10 : base;
+  if (arguments.length == 1) {
+    base = 10;
+  }
+  number = utils.parseNumber(number);
+  base = utils.parseNumber(base);
+  var anyError = utils.anyError(number, base);
+  if (anyError) {
+    return anyError;
+  }
+  if (number === 0 || base === 0) {
+    return error.num;
+  }
   return Math.log(number) / Math.log(base);
 };
 
 exports.LOG10 = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
+  }
+  if (number === 0) {
+    return error.num;
   }
   return Math.log(number) / Math.log(10);
 };
 
 exports.MOD = function(dividend, divisor) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   dividend = utils.parseNumber(dividend);
   divisor = utils.parseNumber(divisor);
-  if (utils.anyIsError(dividend, divisor)) {
-    return error.value;
+  var anyError = utils.anyError(dividend, divisor);
+  if (anyError) {
+    return anyError;
   }
   if (divisor === 0) {
     return error.div0;
@@ -1078,10 +1313,17 @@ exports.MOD = function(dividend, divisor) {
 };
 
 exports.MROUND = function(number, multiple) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   multiple = utils.parseNumber(multiple);
-  if (utils.anyIsError(number, multiple)) {
-    return error.value;
+  var anyError = utils.anyError(number, multiple);
+  if (anyError) {
+    return anyError;
+  }
+  if (number * multiple === 0) {
+    return 0;
   }
   if (number * multiple < 0) {
     return error.num;
@@ -1091,6 +1333,9 @@ exports.MROUND = function(number, multiple) {
 };
 
 exports.MULTINOMIAL = function() {
+  if (arguments.length === 0) {
+    return error.na;
+  }
   var args = utils.parseNumberArray(utils.flatten(arguments));
   if (args instanceof Error) {
     return args;
@@ -1105,28 +1350,38 @@ exports.MULTINOMIAL = function() {
 };
 
 exports.ODD = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
   }
   var temp = Math.ceil(Math.abs(number));
   temp = (temp & 1) ? temp : temp + 1;
-  return (number > 0) ? temp : -temp;
+  return (number >= 0) ? temp : -temp;
 };
 
 exports.PI = function() {
   return Math.PI;
 };
-
+//not exist in excel
 exports.E = function() {
   return Math.E;
 };
 
 exports.POWER = function(number, power) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   power = utils.parseNumber(power);
-  if (utils.anyIsError(number, power)) {
-    return error.value;
+  var anyError = utils.anyError(number, power);
+  if (anyError) {
+    return anyError;
+  }
+  if (number === 0 && power === 0) {
+    return error.num;
   }
   var result = Math.pow(number, power);
   if (isNaN(result)) {
@@ -1137,7 +1392,15 @@ exports.POWER = function(number, power) {
 };
 
 exports.PRODUCT = function() {
-  var args = utils.parseNumberArray(utils.flatten(arguments));
+  if (arguments.length === 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  var flatArgumentsDefined = flatArguments.filter(function (arg) { return arg !== undefined && arg !== null; });
+  if (flatArgumentsDefined.length === 0) {
+    return 0;
+  }
+  var args = utils.parseNumberArray(flatArgumentsDefined);
   if (args instanceof Error) {
     return args;
   }
@@ -1149,15 +1412,22 @@ exports.PRODUCT = function() {
 };
 
 exports.QUOTIENT = function(numerator, denominator) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   numerator = utils.parseNumber(numerator);
   denominator = utils.parseNumber(denominator);
-  if (utils.anyIsError(numerator, denominator)) {
-    return error.value;
+  var anyError = utils.anyError(numerator, denominator);
+  if (anyError) {
+    return anyError;
   }
   return parseInt(numerator / denominator, 10);
 };
 
 exports.RADIANS = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1166,14 +1436,21 @@ exports.RADIANS = function(number) {
 };
 
 exports.RAND = function() {
+  if (arguments.length !== 0) {
+    return error.na;
+  }
   return Math.random();
 };
 
 exports.RANDBETWEEN = function(bottom, top) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   bottom = utils.parseNumber(bottom);
   top = utils.parseNumber(top);
-  if (utils.anyIsError(bottom, top)) {
-    return error.value;
+  var anyError = utils.anyError(bottom, top);
+  if (anyError) {
+    return anyError;
   }
   // Creative Commons Attribution 3.0 License
   // Copyright (c) 2012 eqcode
@@ -1182,6 +1459,9 @@ exports.RANDBETWEEN = function(bottom, top) {
 
 // TODO
 exports.ROMAN = function(number) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1199,35 +1479,50 @@ exports.ROMAN = function(number) {
 };
 
 exports.ROUND = function(number, digits) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   digits = utils.parseNumber(digits);
-  if (utils.anyIsError(number, digits)) {
-    return error.value;
+  var anyError = utils.anyError(number, digits);
+  if (anyError) {
+    return anyError;
   }
   return Math.round(number * Math.pow(10, digits)) / Math.pow(10, digits);
 };
 
 exports.ROUNDDOWN = function(number, digits) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   digits = utils.parseNumber(digits);
-  if (utils.anyIsError(number, digits)) {
-    return error.value;
+  var anyError = utils.anyError(number, digits);
+  if (anyError) {
+    return anyError;
   }
   var sign = (number > 0) ? 1 : -1;
   return sign * (Math.floor(Math.abs(number) * Math.pow(10, digits))) / Math.pow(10, digits);
 };
 
 exports.ROUNDUP = function(number, digits) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   digits = utils.parseNumber(digits);
-  if (utils.anyIsError(number, digits)) {
-    return error.value;
+  var anyError = utils.anyError(number, digits);
+  if (anyError) {
+    return anyError;
   }
   var sign = (number > 0) ? 1 : -1;
   return sign * (Math.ceil(Math.abs(number) * Math.pow(10, digits))) / Math.pow(10, digits);
 };
 
 exports.SEC = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1236,6 +1531,9 @@ exports.SEC = function(number) {
 };
 
 exports.SECH = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1244,6 +1542,9 @@ exports.SECH = function(number) {
 };
 
 exports.SERIESSUM = function(x, n, m, coefficients) {
+  if (arguments.length <3 || arguments.length>4) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   n = utils.parseNumber(n);
   m = utils.parseNumber(m);
@@ -1259,6 +1560,9 @@ exports.SERIESSUM = function(x, n, m, coefficients) {
 };
 
 exports.SIGN = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1273,6 +1577,9 @@ exports.SIGN = function(number) {
 };
 
 exports.SIN = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1281,6 +1588,9 @@ exports.SIN = function(number) {
 };
 
 exports.SINH = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1289,6 +1599,9 @@ exports.SINH = function(number) {
 };
 
 exports.SQRT = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1300,6 +1613,9 @@ exports.SQRT = function(number) {
 };
 
 exports.SQRTPI = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1369,7 +1685,7 @@ exports.SUBTOTAL = function(function_code, ref1) {
 
   }
 };
-
+//not in excel add minus divide multiply, ...
 exports.ADD = function (num1, num2) {
   if (arguments.length !== 2) {
     return error.na;
@@ -1377,8 +1693,9 @@ exports.ADD = function (num1, num2) {
 
   num1 = utils.parseNumber(num1);
   num2 = utils.parseNumber(num2);
-  if (utils.anyIsError(num1, num2)) {
-    return error.value;
+  var anyError = utils.anyError(num1, num2);
+  if (anyError) {
+    return anyError;
   }
 
   return num1 + num2;
@@ -1391,8 +1708,9 @@ exports.MINUS = function (num1, num2) {
 
   num1 = utils.parseNumber(num1);
   num2 = utils.parseNumber(num2);
-  if (utils.anyIsError(num1, num2)) {
-    return error.value;
+  var anyError = utils.anyError(num1, num2);
+  if (anyError) {
+    return anyError;
   }
 
   return num1 - num2;
@@ -1405,8 +1723,9 @@ exports.DIVIDE = function (dividend, divisor) {
 
   dividend = utils.parseNumber(dividend);
   divisor = utils.parseNumber(divisor);
-  if (utils.anyIsError(dividend, divisor)) {
-    return error.value;
+  var anyError = utils.anyError(dividend, divisor);
+  if (anyError) {
+    return anyError;
   }
 
   if (divisor === 0) {
@@ -1423,22 +1742,56 @@ exports.MULTIPLY = function (factor1, factor2) {
 
   factor1 = utils.parseNumber(factor1);
   factor2 = utils.parseNumber(factor2);
-  if (utils.anyIsError(factor1, factor2)) {
-    return error.value;
+  var anyError = utils.anyError(factor1, factor2);
+  if (anyError) {
+    return anyError;
   }
 
   return factor1 * factor2;
 };
+//Not exist in excel !
+exports.GT = function (num1, num2) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
+  if (num1 instanceof Error) {
+    return num1;
+  }
+  if (num2 instanceof Error) {
+    return num2;
+  }
 
+  if (utils.anyIsString(num1, num2)) {
+    num1 = utils.parseString(num1);
+    num2 = utils.parseString(num2);
+  } else {
+    num1 = utils.parseNumber(num1);
+    num2 = utils.parseNumber(num2);
+  }
+  var anyError = utils.anyError(num1, num2);
+  if (anyError) {
+    return anyError;
+  }
+
+  return num1 > num2;
+};
+
+//Not exist in excel !
 exports.GTE = function (num1, num2) {
   if (arguments.length !== 2) {
     return error.na;
   }
 
-  num1 = utils.parseNumber(num1);
-  num2 = utils.parseNumber(num2);
-  if (utils.anyIsError(num1, num2)) {
-    return error.error;
+  if (utils.anyIsString(num1, num2)) {
+    num1 = utils.parseString(num1);
+    num2 = utils.parseString(num2);
+  } else {
+    num1 = utils.parseNumber(num1);
+    num2 = utils.parseNumber(num2);
+  }
+  var anyError = utils.anyError(num1, num2);
+  if (anyError) {
+    return anyError;
   }
 
   return num1 >= num2;
@@ -1449,10 +1802,16 @@ exports.LT = function (num1, num2) {
     return error.na;
   }
 
-  num1 = utils.parseNumber(num1);
-  num2 = utils.parseNumber(num2);
-  if (utils.anyIsError(num1, num2)) {
-    return error.error;
+  if (utils.anyIsString(num1, num2)) {
+    num1 = utils.parseString(num1);
+    num2 = utils.parseString(num2);
+  } else {
+    num1 = utils.parseNumber(num1);
+    num2 = utils.parseNumber(num2);
+  }
+  var anyError = utils.anyError(num1, num2);
+  if (anyError) {
+    return anyError;
   }
 
   return num1 < num2;
@@ -1464,10 +1823,16 @@ exports.LTE = function (num1, num2) {
     return error.na;
   }
 
-  num1 = utils.parseNumber(num1);
-  num2 = utils.parseNumber(num2);
-  if (utils.anyIsError(num1, num2)) {
-    return error.error;
+  if (utils.anyIsString(num1, num2)) {
+    num1 = utils.parseString(num1);
+    num2 = utils.parseString(num2);
+  } else {
+    num1 = utils.parseNumber(num1);
+    num2 = utils.parseNumber(num2);
+  }
+  var anyError = utils.anyError(num1, num2);
+  if (anyError) {
+    return anyError;
   }
 
   return num1 <= num2;
@@ -1477,6 +1842,18 @@ exports.EQ = function (value1, value2) {
   if (arguments.length !== 2) {
     return error.na;
   }
+  if (value1 instanceof Error) {
+    return value1;
+  }
+  if (value2 instanceof Error) {
+    return value2;
+  }
+  if (value1 === null) {
+    value1 = undefined;
+  }
+  if (value2 === null) {
+    value2 = undefined;
+  }
 
   return value1 === value2;
 };
@@ -1484,6 +1861,18 @@ exports.EQ = function (value1, value2) {
 exports.NE = function (value1, value2) {
   if (arguments.length !== 2) {
     return error.na;
+  }
+  if (value1 instanceof Error) {
+    return value1;
+  }
+  if (value2 instanceof Error) {
+    return value2;
+  }
+  if (value1 === null) {
+    value1 = undefined;
+  }
+  if (value2 === null) {
+    value2 = undefined;
   }
 
   return value1 !== value2;
@@ -1494,35 +1883,41 @@ exports.POW = function (base, exponent) {
     return error.na;
   }
 
-  base = utils.parseNumber(base);
-  exponent = utils.parseNumber(exponent);
-  if (utils.anyIsError(base, exponent)) {
-    return error.error;
-  }
-
   return exports.POWER(base, exponent);
 };
 
 exports.SUM = function() {
   var result = 0;
-
+  if (arguments.length < 1) {
+    return error.na;
+  }
   utils.arrayEach(utils.argsToArray(arguments), function(value) {
-    if (typeof value === 'number') {
+    if (result instanceof Error) {
+      return false;
+    } else if (value instanceof Error) {
+      result = value;
+    } else if (typeof value === 'number') {
       result += value;
 
     } else if (typeof value === 'string') {
       var parsed = parseFloat(value);
-
-      !isNaN(parsed) && (result += parsed);
+      if(isNaN(parsed)){
+        result = error.value;
+      }else{
+        result += parsed;
+      }
 
     } else if (Array.isArray(value)) {
-      result += exports.SUM.apply(null, value);
+      var inner_result = exports.SUM.apply(null, value);
+      if (inner_result instanceof Error) {
+        result = inner_result;
+      } else {
+        result += inner_result;
+      }
     }
   });
-
   return result;
 };
-
 exports.SUMIF = function (range, criteria, sumRange) {
   range = utils.flatten(range);
   if (sumRange) {
@@ -1533,8 +1928,11 @@ exports.SUMIF = function (range, criteria, sumRange) {
   if (range instanceof Error) {
     return range;
   }
+  if (criteria === undefined || criteria === null || criteria instanceof Error) {
+    return 0;
+  }
   var result = 0;
-  var isWildcard = criteria === void 0 || criteria === '*';
+  var isWildcard = criteria === '*';
   var tokenizedCriteria = isWildcard ? null : evalExpression.parse(criteria + '');
   for (var i = 0; i < range.length; i++) {
     var value = range[i];
@@ -1545,7 +1943,7 @@ exports.SUMIF = function (range, criteria, sumRange) {
     } else {
       var tokens = [evalExpression.createToken(value, evalExpression.TOKEN_TYPE_LITERAL)].concat(tokenizedCriteria);
 
-      result += (evalExpression.compute(tokens) ? sumValue : 0);
+      result += evalExpression.compute(tokens) ? sumValue : 0;
     }
   }
 
@@ -1605,8 +2003,8 @@ exports.SUMIFS = function() {
 };
 
 exports.SUMPRODUCT = function() {
-  if (!arguments || arguments.length === 0) {
-    return error.value;
+  if (arguments.length < 1) {
+    return error.na;
   }
   var arrays = arguments.length + 1;
   var result = 0;
@@ -1618,7 +2016,11 @@ exports.SUMPRODUCT = function() {
     if (!(arguments[0][i] instanceof Array)) {
       product = 1;
       for (k = 1; k < arrays; k++) {
-        _i = utils.parseNumber(arguments[k - 1][i]);
+        var _i_arg = arguments[k - 1][i];
+        if (_i_arg instanceof Error) {
+          return _i_arg;
+        }
+        _i = utils.parseNumber(_i_arg);
         if (_i instanceof Error) {
           return _i;
         }
@@ -1629,7 +2031,11 @@ exports.SUMPRODUCT = function() {
       for (var j = 0; j < arguments[0][i].length; j++) {
         product = 1;
         for (k = 1; k < arrays; k++) {
-          _ij = utils.parseNumber(arguments[k - 1][i][j]);
+          var _ij_arg = arguments[k - 1][i][j];
+          if (_ij_arg instanceof Error) {
+            return _ij_arg;
+          }
+          _ij = utils.parseNumber(_ij_arg);
           if (_ij instanceof Error) {
             return _ij;
           }
@@ -1643,12 +2049,18 @@ exports.SUMPRODUCT = function() {
 };
 
 exports.SUMSQ = function() {
+  if (arguments.length < 1) {
+    return error.na;
+  }
   var numbers = utils.parseNumberArray(utils.flatten(arguments));
   if (numbers instanceof Error) {
     return numbers;
   }
   var result = 0;
   var length = numbers.length;
+  if (length == 0) {
+    return error.na;
+  }
   for (var i = 0; i < length; i++) {
     result += (information.ISNUMBER(numbers[i])) ? numbers[i] * numbers[i] : 0;
   }
@@ -1699,6 +2111,9 @@ exports.SUMXMY2 = function(array_x, array_y) {
 };
 
 exports.TAN = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1707,6 +2122,9 @@ exports.TAN = function(number) {
 };
 
 exports.TANH = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -1716,11 +2134,14 @@ exports.TANH = function(number) {
 };
 
 exports.TRUNC = function(number, digits) {
-  digits = (digits === undefined) ? 0 : digits;
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   digits = utils.parseNumber(digits);
-  if (utils.anyIsError(number, digits)) {
-    return error.value;
+  var anyError = utils.anyError(number, digits);
+  if (anyError) {
+    return anyError;
   }
   var sign = (number > 0) ? 1 : -1;
   return sign * (Math.floor(Math.abs(number) * Math.pow(10, digits))) / Math.pow(10, digits);
@@ -1742,7 +2163,15 @@ var misc = __webpack_require__(11);
 var SQRT2PI = 2.5066282746310002;
 
 exports.AVEDEV = function() {
-  var range = utils.parseNumberArray(utils.flatten(arguments));
+  if (arguments.length == 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  var flatArgumentsDefined = flatArguments.filter(utils.isDefined);
+  if (flatArgumentsDefined.length === 0) {
+    return error.num;
+  }
+  var range = utils.parseNumberArray(flatArgumentsDefined);
   if (range instanceof Error) {
     return range;
   }
@@ -1750,7 +2179,19 @@ exports.AVEDEV = function() {
 };
 
 exports.AVERAGE = function() {
-  var range = utils.numbers(utils.flatten(arguments));
+  if (arguments.length == 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  var flatArgumentsDefined = flatArguments.filter(utils.isDefined);
+  if (flatArgumentsDefined.length === 0) {
+    return error.div0;
+  }
+  var someError = utils.anyError.apply(undefined, flatArgumentsDefined);
+  if (someError) {
+    return someError;
+  }
+  var range = utils.numbers(flatArgumentsDefined);
   var n = range.length;
   var sum = 0;
   var count = 0;
@@ -1770,7 +2211,19 @@ exports.AVERAGE = function() {
 };
 
 exports.AVERAGEA = function() {
-  var range = utils.flatten(arguments);
+  if (arguments.length == 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  var flatArgumentsDefined = flatArguments.filter(utils.isDefined);
+  if (flatArgumentsDefined.length === 0) {
+    return error.div0;
+  }
+  var someError = utils.anyError.apply(undefined, flatArgumentsDefined);
+  if (someError) {
+    return someError;
+  }
+  var range = flatArgumentsDefined;
   var n = range.length;
   var sum = 0;
   var count = 0;
@@ -1801,8 +2254,11 @@ exports.AVERAGEIF = function(range, criteria, average_range) {
     return error.na;
   }
   average_range = average_range || range;
+  var flatAverageRange = utils.flatten(average_range);
+  var flatAverageRangeDefined = flatAverageRange.filter(utils.isDefined);
+  average_range = utils.parseNumberArray(flatAverageRangeDefined);
+
   range = utils.flatten(range);
-  average_range = utils.parseNumberArray(utils.flatten(average_range));
 
   if (average_range instanceof Error) {
     return average_range;
@@ -1833,7 +2289,7 @@ exports.AVERAGEIF = function(range, criteria, average_range) {
 
 exports.AVERAGEIFS = function() {
   // Does not work with multi dimensional ranges yet!
-  //http://office.microsoft.com/en-001/excel-help/averageifs-function-HA010047493.aspx
+  // http://office.microsoft.com/en-001/excel-help/averageifs-function-HA010047493.aspx
   var args = utils.argsToArray(arguments);
   var criteriaLength = (args.length - 1) / 2;
   var range = utils.flatten(args[0]);
@@ -1884,9 +2340,15 @@ exports.AVERAGEIFS = function() {
 
 exports.BETA = {};
 
+exports.BETADIST = function(x, alpha, beta, A, B) {
+  if (arguments.length < 3 || arguments.length>5) {
+    return error.na;
+  }
+  return exports.BETA.DIST(x, alpha, beta, true, A, B)
+}
 exports.BETA.DIST = function(x, alpha, beta, cumulative, A, B) {
-  if (arguments.length < 4) {
-    return error.value;
+  if (arguments.length < 4 || arguments.length>6) {
+    return error.na;
   }
 
   A = (A === undefined) ? 0 : A;
@@ -1906,6 +2368,9 @@ exports.BETA.DIST = function(x, alpha, beta, cumulative, A, B) {
 };
 
 exports.BETA.INV = function(probability, alpha, beta, A, B) {
+  if (arguments.length < 3 || arguments.length>5) {
+    return error.na;
+  }
   A = (A === undefined) ? 0 : A;
   B = (B === undefined) ? 1 : B;
 
@@ -1924,6 +2389,9 @@ exports.BETA.INV = function(probability, alpha, beta, A, B) {
 exports.BINOM = {};
 
 exports.BINOM.DIST = function(successes, trials, probability, cumulative) {
+  if (arguments.length !== 4) {
+    return error.na;
+  }
   successes = utils.parseNumber(successes);
   trials = utils.parseNumber(trials);
   probability = utils.parseNumber(probability);
@@ -1935,6 +2403,10 @@ exports.BINOM.DIST = function(successes, trials, probability, cumulative) {
 };
 
 exports.BINOM.DIST.RANGE = function(trials, probability, successes, successes2) {
+  if (arguments.length < 3 || arguments.length > 4) {
+    return error.na;
+  }
+
   successes2 = (successes2 === undefined) ? successes : successes2;
 
   trials = utils.parseNumber(trials);
@@ -1953,6 +2425,9 @@ exports.BINOM.DIST.RANGE = function(trials, probability, successes, successes2) 
 };
 
 exports.BINOM.INV = function(trials, probability, alpha) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   trials = utils.parseNumber(trials);
   probability = utils.parseNumber(probability);
   alpha = utils.parseNumber(alpha);
@@ -1972,6 +2447,9 @@ exports.BINOM.INV = function(trials, probability, alpha) {
 exports.CHISQ = {};
 
 exports.CHISQ.DIST = function(x, k, cumulative) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   k = utils.parseNumber(k);
   if (utils.anyIsError(x, k)) {
@@ -1982,6 +2460,9 @@ exports.CHISQ.DIST = function(x, k, cumulative) {
 };
 
 exports.CHISQ.DIST.RT = function(x, k) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   if (!x | !k) {
     return error.na;
   }
@@ -1998,6 +2479,9 @@ exports.CHISQ.DIST.RT = function(x, k) {
 };
 
 exports.CHISQ.INV = function(probability, k) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   probability = utils.parseNumber(probability);
   k = utils.parseNumber(k);
   if (utils.anyIsError(probability, k)) {
@@ -2007,6 +2491,9 @@ exports.CHISQ.INV = function(probability, k) {
 };
 
 exports.CHISQ.INV.RT = function(p, k) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   if (!p | !k) {
     return error.na;
   }
@@ -2131,6 +2618,9 @@ exports.COLUMNS = function(matrix) {
 exports.CONFIDENCE = {};
 
 exports.CONFIDENCE.NORM = function(alpha, sd, n) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   alpha = utils.parseNumber(alpha);
   sd = utils.parseNumber(sd);
   n = utils.parseNumber(n);
@@ -2141,6 +2631,9 @@ exports.CONFIDENCE.NORM = function(alpha, sd, n) {
 };
 
 exports.CONFIDENCE.T = function(alpha, sd, n) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   alpha = utils.parseNumber(alpha);
   sd = utils.parseNumber(sd);
   n = utils.parseNumber(n);
@@ -2151,6 +2644,9 @@ exports.CONFIDENCE.T = function(alpha, sd, n) {
 };
 
 exports.CORREL = function(array1, array2) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   array1 = utils.parseNumberArray(utils.flatten(array1));
   array2 = utils.parseNumberArray(utils.flatten(array2));
   if (utils.anyIsError(array1, array2)) {
@@ -2160,14 +2656,21 @@ exports.CORREL = function(array1, array2) {
 };
 
 exports.COUNT = function() {
-  return utils.numbers(utils.flatten(arguments)).length;
+  if (arguments.length === 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  return utils.numbers(flatArguments).length;
 };
 
 exports.COUNTA = function() {
-  var range = utils.flatten(arguments);
-  return range.length - exports.COUNTBLANK(range);
+  if (arguments.length === 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  return flatArguments.length - exports.COUNTBLANK(flatArguments);
 };
-
+// not exist in excel
 exports.COUNTIN = function (range, value) {
   var result = 0;
 
@@ -2188,7 +2691,7 @@ exports.COUNTBLANK = function() {
   var element;
   for (var i = 0; i < range.length; i++) {
     element = range[i];
-    if (element === null || element === '') {
+    if (element === undefined || element === null || element === '') {
       blanks++;
     }
   }
@@ -2196,6 +2699,9 @@ exports.COUNTBLANK = function() {
 };
 
 exports.COUNTIF = function(range, criteria) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   range = utils.flatten(range);
 
   var isWildcard = criteria === void 0 || criteria === '*';
@@ -2251,7 +2757,7 @@ exports.COUNTIFS = function() {
 
   return result;
 };
-
+// not exist in excel 
 exports.COUNTUNIQUE = function () {
   return misc.UNIQUE.apply(null, utils.flatten(arguments)).length;
 };
@@ -2259,6 +2765,9 @@ exports.COUNTUNIQUE = function () {
 exports.COVARIANCE = {};
 
 exports.COVARIANCE.P = function(array1, array2) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   array1 = utils.parseNumberArray(utils.flatten(array1));
   array2 = utils.parseNumberArray(utils.flatten(array2));
   if (utils.anyIsError(array1, array2)) {
@@ -2275,6 +2784,9 @@ exports.COVARIANCE.P = function(array1, array2) {
 };
 
 exports.COVARIANCE.S = function(array1, array2) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   array1 = utils.parseNumberArray(utils.flatten(array1));
   array2 = utils.parseNumberArray(utils.flatten(array2));
   if (utils.anyIsError(array1, array2)) {
@@ -2284,6 +2796,9 @@ exports.COVARIANCE.S = function(array1, array2) {
 };
 
 exports.DEVSQ = function() {
+  if (arguments.length == 0) {
+    return error.na;
+  }
   var range = utils.parseNumberArray(utils.flatten(arguments));
   if (range instanceof Error) {
     return range;
@@ -2299,6 +2814,9 @@ exports.DEVSQ = function() {
 exports.EXPON = {};
 
 exports.EXPON.DIST = function(x, lambda, cumulative) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   lambda = utils.parseNumber(lambda);
   if (utils.anyIsError(x, lambda)) {
@@ -2310,6 +2828,9 @@ exports.EXPON.DIST = function(x, lambda, cumulative) {
 exports.F = {};
 
 exports.F.DIST = function(x, d1, d2, cumulative) {
+  if (arguments.length !== 4) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   d1 = utils.parseNumber(d1);
   d2 = utils.parseNumber(d2);
@@ -2336,6 +2857,9 @@ exports.F.DIST.RT = function(x, d1, d2) {
 };
 
 exports.F.INV = function(probability, d1, d2) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   probability = utils.parseNumber(probability);
   d1 = utils.parseNumber(d1);
   d2 = utils.parseNumber(d2);
@@ -2366,6 +2890,9 @@ exports.F.INV.RT = function(p, d1, d2) {
 };
 
 exports.F.TEST = function(array1, array2) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   if (!array1 || !array2) {
     return error.na;
   }
@@ -2395,6 +2922,9 @@ exports.F.TEST = function(array1, array2) {
 };
 
 exports.FISHER = function(x) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   if (x instanceof Error) {
     return x;
@@ -2403,6 +2933,9 @@ exports.FISHER = function(x) {
 };
 
 exports.FISHERINV = function(y) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   y = utils.parseNumber(y);
   if (y instanceof Error) {
     return y;
@@ -2412,7 +2945,9 @@ exports.FISHERINV = function(y) {
 };
 
 exports.FORECAST = function(x, data_y, data_x) {
-  x = utils.parseNumber(x);
+  if (arguments.length !== 3) {
+    return error.na;
+  }  x = utils.parseNumber(x);
   data_y = utils.parseNumberArray(utils.flatten(data_y));
   data_x = utils.parseNumberArray(utils.flatten(data_x));
   if (utils.anyIsError(x, data_y, data_x)) {
@@ -2433,6 +2968,9 @@ exports.FORECAST = function(x, data_y, data_x) {
 };
 
 exports.FREQUENCY = function(data, bins) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   data = utils.parseNumberArray(utils.flatten(data));
   bins = utils.parseNumberArray(utils.flatten(bins));
   if (utils.anyIsError(data, bins)) {
@@ -2464,6 +3002,9 @@ exports.FREQUENCY = function(data, bins) {
 
 
 exports.GAMMA = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -2513,6 +3054,9 @@ exports.GAMMA.INV = function(probability, alpha, beta) {
 };
 
 exports.GAMMALN = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -2537,6 +3081,9 @@ exports.GAMMALN.PRECISE = function(x) {
 };
 
 exports.GAUSS = function(z) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   z = utils.parseNumber(z);
   if (z instanceof Error) {
     return z;
@@ -2545,6 +3092,9 @@ exports.GAUSS = function(z) {
 };
 
 exports.GEOMEAN = function() {
+  if (arguments.length == 0) {
+    return error.na;
+  }
   var args = utils.parseNumberArray(utils.flatten(arguments));
   if (args instanceof Error) {
     return args;
@@ -2553,6 +3103,9 @@ exports.GEOMEAN = function() {
 };
 
 exports.GROWTH = function(known_y, known_x, new_x, use_const) {
+  if (arguments.length < 1 || arguments.length > 4) {
+    return error.na;
+  }
   // Credits: Ilmari Karonen (http://stackoverflow.com/questions/14161990/how-to-implement-growth-function-in-javascript)
 
   known_y = utils.parseNumberArray(known_y);
@@ -2625,6 +3178,9 @@ exports.GROWTH = function(known_y, known_x, new_x, use_const) {
 };
 
 exports.HARMEAN = function() {
+  if (arguments.length == 0) {
+    return error.na;
+  }
   var range = utils.parseNumberArray(utils.flatten(arguments));
   if (range instanceof Error) {
     return range;
@@ -2640,6 +3196,9 @@ exports.HARMEAN = function() {
 exports.HYPGEOM = {};
 
 exports.HYPGEOM.DIST = function(x, n, M, N, cumulative) {
+  if (arguments.length < 4 || arguments.length>5) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   n = utils.parseNumber(n);
   M = utils.parseNumber(M);
@@ -2664,6 +3223,9 @@ exports.HYPGEOM.DIST = function(x, n, M, N, cumulative) {
 };
 
 exports.INTERCEPT = function(known_y, known_x) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   known_y = utils.parseNumberArray(known_y);
   known_x = utils.parseNumberArray(known_x);
   if (utils.anyIsError(known_y, known_x)) {
@@ -2676,6 +3238,9 @@ exports.INTERCEPT = function(known_y, known_x) {
 };
 
 exports.KURT = function() {
+  if(arguments.length===0){
+    return error.na;
+  }
   var range = utils.parseNumberArray(utils.flatten(arguments));
   if (range instanceof Error) {
     return range;
@@ -2691,17 +3256,28 @@ exports.KURT = function() {
 };
 
 exports.LARGE = function(range, k) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   range = utils.parseNumberArray(utils.flatten(range));
   k = utils.parseNumber(k);
   if (utils.anyIsError(range, k)) {
     return range;
   }
+
+  if(k < 0 || range.length < k){
+    return error.value;
+  }
+
   return range.sort(function(a, b) {
     return b - a;
   })[k - 1];
 };
 
 exports.LINEST = function(data_y, data_x) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   data_y = utils.parseNumberArray(utils.flatten(data_y));
   data_x = utils.parseNumberArray(utils.flatten(data_x));
   if (utils.anyIsError(data_y, data_x)) {
@@ -2726,6 +3302,9 @@ exports.LINEST = function(data_y, data_x) {
 // LOGEST returns are based on the following linear model:
 // ln y = x1 ln m1 + ... + xn ln mn + ln b
 exports.LOGEST = function(data_y, data_x) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   data_y = utils.parseNumberArray(utils.flatten(data_y));
   data_x = utils.parseNumberArray(utils.flatten(data_x));
   if (utils.anyIsError(data_y, data_x)) {
@@ -2744,6 +3323,9 @@ exports.LOGEST = function(data_y, data_x) {
 exports.LOGNORM = {};
 
 exports.LOGNORM.DIST = function(x, mean, sd, cumulative) {
+  if (arguments.length !== 4) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   mean = utils.parseNumber(mean);
   sd = utils.parseNumber(sd);
@@ -2754,6 +3336,9 @@ exports.LOGNORM.DIST = function(x, mean, sd, cumulative) {
 };
 
 exports.LOGNORM.INV = function(probability, mean, sd) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   probability = utils.parseNumber(probability);
   mean = utils.parseNumber(mean);
   sd = utils.parseNumber(sd);
@@ -2764,17 +3349,42 @@ exports.LOGNORM.INV = function(probability, mean, sd) {
 };
 
 exports.MAX = function() {
-  var range = utils.numbers(utils.flatten(arguments));
+  if (arguments.length === 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  var someError = utils.anyError.apply(undefined, flatArguments);
+  if (someError) {
+    return someError;
+  }
+  var range = utils.numbers(flatArguments);
   return (range.length === 0) ? 0 : Math.max.apply(Math, range);
 };
 
 exports.MAXA = function() {
-  var range = utils.arrayValuesToNumbers(utils.flatten(arguments));
+  if (arguments.length === 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  var someError = utils.anyError.apply(undefined, flatArguments);
+  if (someError) {
+    return someError;
+  }
+  var range = utils.arrayValuesToNumbers(flatArguments);
+  range = range.map(function (value) { return (value === undefined || value === null) ? 0 : value; });
   return (range.length === 0) ? 0 : Math.max.apply(Math, range);
 };
 
 exports.MEDIAN = function() {
-  var range = utils.arrayValuesToNumbers(utils.flatten(arguments));
+  if (arguments.length === 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  var someError = utils.anyError.apply(undefined, flatArguments);
+  if (someError) {
+    return someError;
+  }
+  var range = utils.arrayValuesToNumbers(flatArguments);
   var result = jStat.median(range);
 
   if (isNaN(result)) {
@@ -2785,18 +3395,38 @@ exports.MEDIAN = function() {
 };
 
 exports.MIN = function() {
-  var range = utils.numbers(utils.flatten(arguments));
+  if (arguments.length === 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  var someError = utils.anyError.apply(undefined, flatArguments);
+  if (someError) {
+    return someError;
+  }
+  var range = utils.numbers(flatArguments);
   return (range.length === 0) ? 0 : Math.min.apply(Math, range);
 };
 
 exports.MINA = function() {
-  var range = utils.arrayValuesToNumbers(utils.flatten(arguments));
+  if (arguments.length === 0) {
+    return error.na;
+  }
+  var flatArguments = utils.flatten(arguments);
+  var someError = utils.anyError.apply(undefined, flatArguments);
+  if (someError) {
+    return someError;
+  }
+  var range = utils.arrayValuesToNumbers(flatArguments);
+  range = range.map(function (value) { return (value === undefined || value === null) ? 0 : value; });
   return (range.length === 0) ? 0 : Math.min.apply(Math, range);
 };
 
 exports.MODE = {};
 
 exports.MODE.MULT = function() {
+  if (arguments.length === 0) {
+    return error.na;
+  }
   // Credits: Roönaän
   var range = utils.parseNumberArray(utils.flatten(arguments));
   if (range instanceof Error) {
@@ -2823,6 +3453,9 @@ exports.MODE.MULT = function() {
 };
 
 exports.MODE.SNGL = function() {
+  if (arguments.length === 0) {
+    return error.na;
+  }
   var range = utils.parseNumberArray(utils.flatten(arguments));
   if (range instanceof Error) {
     return range;
@@ -2835,6 +3468,9 @@ exports.MODE.SNGL = function() {
 exports.NEGBINOM = {};
 
 exports.NEGBINOM.DIST = function(k, r, p, cumulative) {
+  if (arguments.length !== 4) {
+    return error.na;
+  }
   k = utils.parseNumber(k);
   r = utils.parseNumber(r);
   p = utils.parseNumber(p);
@@ -2847,6 +3483,9 @@ exports.NEGBINOM.DIST = function(k, r, p, cumulative) {
 exports.NORM = {};
 
 exports.NORM.DIST = function(x, mean, sd, cumulative) {
+  if (arguments.length !== 4) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   mean = utils.parseNumber(mean);
   sd = utils.parseNumber(sd);
@@ -2862,6 +3501,9 @@ exports.NORM.DIST = function(x, mean, sd, cumulative) {
 };
 
 exports.NORM.INV = function(probability, mean, sd) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   probability = utils.parseNumber(probability);
   mean = utils.parseNumber(mean);
   sd = utils.parseNumber(sd);
@@ -2874,6 +3516,9 @@ exports.NORM.INV = function(probability, mean, sd) {
 exports.NORM.S = {};
 
 exports.NORM.S.DIST = function(z, cumulative) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   z = utils.parseNumber(z);
   if (z instanceof Error) {
     return error.value;
@@ -2882,6 +3527,9 @@ exports.NORM.S.DIST = function(z, cumulative) {
 };
 
 exports.NORM.S.INV = function(probability) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   probability = utils.parseNumber(probability);
   if (probability instanceof Error) {
     return error.value;
@@ -2890,6 +3538,9 @@ exports.NORM.S.INV = function(probability) {
 };
 
 exports.PEARSON = function(data_x, data_y) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   data_y = utils.parseNumberArray(utils.flatten(data_y));
   data_x = utils.parseNumberArray(utils.flatten(data_x));
   if (utils.anyIsError(data_y, data_x)) {
@@ -2912,6 +3563,9 @@ exports.PEARSON = function(data_x, data_y) {
 exports.PERCENTILE = {};
 
 exports.PERCENTILE.EXC = function(array, k) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   array = utils.parseNumberArray(utils.flatten(array));
   k = utils.parseNumber(k);
   if (utils.anyIsError(array, k)) {
@@ -2932,6 +3586,9 @@ exports.PERCENTILE.EXC = function(array, k) {
 };
 
 exports.PERCENTILE.INC = function(array, k) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   array = utils.parseNumberArray(utils.flatten(array));
   k = utils.parseNumber(k);
   if (utils.anyIsError(array, k)) {
@@ -2949,6 +3606,9 @@ exports.PERCENTILE.INC = function(array, k) {
 exports.PERCENTRANK = {};
 
 exports.PERCENTRANK.EXC = function(array, x, significance) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   significance = (significance === undefined) ? 3 : significance;
   array = utils.parseNumberArray(utils.flatten(array));
   x = utils.parseNumber(x);
@@ -2980,6 +3640,9 @@ exports.PERCENTRANK.EXC = function(array, x, significance) {
 };
 
 exports.PERCENTRANK.INC = function(array, x, significance) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   significance = (significance === undefined) ? 3 : significance;
   array = utils.parseNumberArray(utils.flatten(array));
   x = utils.parseNumber(x);
@@ -3011,6 +3674,9 @@ exports.PERCENTRANK.INC = function(array, x, significance) {
 };
 
 exports.PERMUT = function(number, number_chosen) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   number_chosen = utils.parseNumber(number_chosen);
   if (utils.anyIsError(number, number_chosen)) {
@@ -3020,6 +3686,9 @@ exports.PERMUT = function(number, number_chosen) {
 };
 
 exports.PERMUTATIONA = function(number, number_chosen) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   number_chosen = utils.parseNumber(number_chosen);
   if (utils.anyIsError(number, number_chosen)) {
@@ -3029,6 +3698,9 @@ exports.PERMUTATIONA = function(number, number_chosen) {
 };
 
 exports.PHI = function(x) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   if (x instanceof Error) {
     return error.value;
@@ -3039,6 +3711,9 @@ exports.PHI = function(x) {
 exports.POISSON = {};
 
 exports.POISSON.DIST = function(x, mean, cumulative) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   mean = utils.parseNumber(mean);
   if (utils.anyIsError(x, mean)) {
@@ -3048,6 +3723,9 @@ exports.POISSON.DIST = function(x, mean, cumulative) {
 };
 
 exports.PROB = function(range, probability, lower, upper) {
+  if (arguments.length < 3 || arguments.length > 4) {
+    return error.na;
+  }
   if (lower === undefined) {
     return 0;
   }
@@ -3081,6 +3759,9 @@ exports.PROB = function(range, probability, lower, upper) {
 exports.QUARTILE = {};
 
 exports.QUARTILE.EXC = function(range, quart) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   range = utils.parseNumberArray(utils.flatten(range));
   quart = utils.parseNumber(quart);
   if (utils.anyIsError(range, quart)) {
@@ -3099,6 +3780,9 @@ exports.QUARTILE.EXC = function(range, quart) {
 };
 
 exports.QUARTILE.INC = function(range, quart) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   range = utils.parseNumberArray(utils.flatten(range));
   quart = utils.parseNumber(quart);
   if (utils.anyIsError(range, quart)) {
@@ -3119,6 +3803,9 @@ exports.QUARTILE.INC = function(range, quart) {
 exports.RANK = {};
 
 exports.RANK.AVG = function(number, range, order) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   range = utils.parseNumberArray(utils.flatten(range));
   if (utils.anyIsError(number, range)) {
@@ -3145,6 +3832,9 @@ exports.RANK.AVG = function(number, range, order) {
 };
 
 exports.RANK.EQ = function(number, range, order) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   range = utils.parseNumberArray(utils.flatten(range));
   if (utils.anyIsError(number, range)) {
@@ -3197,6 +3887,9 @@ exports.ROWS = function(matrix) {
 };
 
 exports.RSQ = function(data_x, data_y) { // no need to flatten here, PEARSON will take care of that
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   data_x = utils.parseNumberArray(utils.flatten(data_x));
   data_y = utils.parseNumberArray(utils.flatten(data_y));
   if (utils.anyIsError(data_x, data_y)) {
@@ -3206,6 +3899,9 @@ exports.RSQ = function(data_x, data_y) { // no need to flatten here, PEARSON wil
 };
 
 exports.SKEW = function() {
+  if (arguments.length === 0) {
+    return error.na;
+  }
   var range = utils.parseNumberArray(utils.flatten(arguments));
   if (range instanceof Error) {
     return range;
@@ -3220,6 +3916,9 @@ exports.SKEW = function() {
 };
 
 exports.SKEW.P = function() {
+  if (arguments.length === 0) {
+    return error.na;
+  }
   var range = utils.parseNumberArray(utils.flatten(arguments));
   if (range instanceof Error) {
     return range;
@@ -3238,6 +3937,9 @@ exports.SKEW.P = function() {
 };
 
 exports.SLOPE = function(data_y, data_x) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   data_y = utils.parseNumberArray(utils.flatten(data_y));
   data_x = utils.parseNumberArray(utils.flatten(data_x));
   if (utils.anyIsError(data_y, data_x)) {
@@ -3256,6 +3958,9 @@ exports.SLOPE = function(data_y, data_x) {
 };
 
 exports.SMALL = function(range, k) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   range = utils.parseNumberArray(utils.flatten(range));
   k = utils.parseNumber(k);
   if (utils.anyIsError(range, k)) {
@@ -3267,6 +3972,9 @@ exports.SMALL = function(range, k) {
 };
 
 exports.STANDARDIZE = function(x, mean, sd) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   mean = utils.parseNumber(mean);
   sd = utils.parseNumber(sd);
@@ -3316,6 +4024,9 @@ exports.STDEVPA = function() {
 
 
 exports.STEYX = function(data_y, data_x) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   data_y = utils.parseNumberArray(utils.flatten(data_y));
   data_x = utils.parseNumberArray(utils.flatten(data_x));
   if (utils.anyIsError(data_y, data_x)) {
@@ -3336,6 +4047,9 @@ exports.STEYX = function(data_y, data_x) {
 };
 
 exports.TRANSPOSE = function(matrix) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   if (!matrix) {
     return error.na;
   }
@@ -3345,6 +4059,9 @@ exports.TRANSPOSE = function(matrix) {
 exports.T = text.T;
 
 exports.T.DIST = function (x, df, tails) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   if (tails !== 1 && tails !== 2) {
     return error.num;
   }
@@ -3385,6 +4102,9 @@ exports.T.DIST.RT = function(x, df) {
 };
 
 exports.T.INV = function(probability, df) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   probability = utils.parseNumber(probability);
   df = utils.parseNumber(df);
   if (utils.anyIsError(probability, df)) {
@@ -3394,6 +4114,9 @@ exports.T.INV = function(probability, df) {
 };
 
 exports.T.INV['2T'] = function(probability, df) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   probability = utils.parseNumber(probability);
   df = utils.parseNumber(df);
   if (probability <= 0 || probability > 1 || df < 1) {
@@ -3408,6 +4131,9 @@ exports.T.INV['2T'] = function(probability, df) {
 // The algorithm can be found here:
 // http://www.chem.uoa.gr/applets/AppletTtest/Appl_Ttest2.html
 exports.T.TEST = function(data_x, data_y) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   data_x = utils.parseNumberArray(utils.flatten(data_x));
   data_y = utils.parseNumberArray(utils.flatten(data_y));
   if (utils.anyIsError(data_x, data_y)) {
@@ -3436,6 +4162,9 @@ exports.T.TEST = function(data_x, data_y) {
 };
 
 exports.TREND = function(data_y, data_x, new_data_x) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   data_y = utils.parseNumberArray(utils.flatten(data_y));
   data_x = utils.parseNumberArray(utils.flatten(data_x));
   new_data_x = utils.parseNumberArray(utils.flatten(new_data_x));
@@ -3455,6 +4184,9 @@ exports.TREND = function(data_y, data_x, new_data_x) {
 };
 
 exports.TRIMMEAN = function(range, percent) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   range = utils.parseNumberArray(utils.flatten(range));
   percent = utils.parseNumber(percent);
   if (utils.anyIsError(range, percent)) {
@@ -3469,6 +4201,9 @@ exports.TRIMMEAN = function(range, percent) {
 exports.VAR = {};
 
 exports.VAR.P = function() {
+  if (arguments.length === 0) {
+    return error.na;
+  }
   var range = utils.numbers(utils.flatten(arguments));
   var n = range.length;
   var sigma = 0;
@@ -3487,6 +4222,9 @@ exports.VAR.P = function() {
 };
 
 exports.VAR.S = function() {
+  if (arguments.length === 0) {
+    return error.na;
+  }
   var range = utils.numbers(utils.flatten(arguments));
   var n = range.length;
   var sigma = 0;
@@ -3498,6 +4236,9 @@ exports.VAR.S = function() {
 };
 
 exports.VARA = function() {
+  if (arguments.length === 0) {
+    return error.na;
+  }
   var range = utils.flatten(arguments);
   var n = range.length;
   var sigma = 0;
@@ -3521,6 +4262,9 @@ exports.VARA = function() {
 };
 
 exports.VARPA = function() {
+  if (arguments.length === 0) {
+    return error.na;
+  }
   var range = utils.flatten(arguments);
   var n = range.length;
   var sigma = 0;
@@ -3553,6 +4297,9 @@ exports.VARPA = function() {
 exports.WEIBULL = {};
 
 exports.WEIBULL.DIST = function(x, alpha, beta, cumulative) {
+  if( arguments.length!=4){
+    return error.na;
+  }
   x = utils.parseNumber(x);
   alpha = utils.parseNumber(alpha);
   beta = utils.parseNumber(beta);
@@ -3565,6 +4312,9 @@ exports.WEIBULL.DIST = function(x, alpha, beta, cumulative) {
 exports.Z = {};
 
 exports.Z.TEST = function(range, x, sd) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   range = utils.parseNumberArray(utils.flatten(range));
   x = utils.parseNumber(x);
   if (utils.anyIsError(range, x)) {
@@ -3595,7 +4345,13 @@ exports.BAHTTEXT = function() {
 };
 
 exports.CHAR = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
+  if (number === 0) {
+    return error.value;
+  }
   if (number instanceof Error) {
     return number;
   }
@@ -3603,24 +4359,42 @@ exports.CHAR = function(number) {
 };
 
 exports.CLEAN = function(text) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+  if (utils.anyIsError(text)) {
+    return text;
+  }
   text = text || '';
   var re = /[\0-\x1F]/g;
   return text.replace(re, "");
 };
 
 exports.CODE = function(text) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+  if (utils.anyIsError(text)) {
+    return text;
+  }
   text = text || '';
   var result = text.charCodeAt(0);
 
   if (isNaN(result)) {
-    result = error.na;
+    result = error.value;
   }
   return result;
 };
 
 exports.CONCATENATE = function() {
+  if (arguments.length < 1) {
+    return error.na;
+  }
   var args = utils.flatten(arguments);
-
+  var someError = utils.anyError.apply(undefined, args);
+  if (someError) {
+    return someError;
+  }
   var trueFound = 0;
   while ((trueFound = args.indexOf(true)) > -1) {
     args[trueFound] = 'TRUE';
@@ -3633,6 +4407,8 @@ exports.CONCATENATE = function() {
 
   return args.join('');
 };
+
+exports.CONCAT = exports.CONCATENATE;
 
 //TODO
 exports.DBCS = function() {
@@ -3648,15 +4424,27 @@ exports.EXACT = function(text1, text2) {
   if (arguments.length !== 2) {
     return error.na;
   }
+  var someError = utils.anyError(text1, text1);
+  if (someError) {
+    return someError;
+  }
+  text1 = utils.parseString(text1);
+  text2 = utils.parseString(text2);
   return text1 === text2;
 };
 
 exports.FIND = function(find_text, within_text, position) {
-  if (arguments.length < 2) {
+  if (arguments.length < 2 || arguments.length > 3) {
     return error.na;
   }
+  find_text = utils.parseString(find_text);
+  within_text = utils.parseString(within_text);
   position = (position === undefined) ? 0 : position;
-  return within_text ? within_text.indexOf(find_text, position - 1) + 1 : null;
+  var found_index = within_text.indexOf(find_text, position - 1);
+  if (found_index === -1) {
+    return error.value;
+  }
+  return found_index + 1;
 };
 
 //TODO
@@ -3665,6 +4453,9 @@ exports.FIXED = function() {
 };
 
 exports.HTML2TEXT = function (value) {
+  if (utils.anyIsError(value)) {
+    return value;
+  }
   var result = '';
 
   if (value) {
@@ -3684,44 +4475,62 @@ exports.HTML2TEXT = function (value) {
 };
 
 exports.LEFT = function(text, number) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
+  var someError = utils.anyError(text, number);
+  if (someError) {
+    return someError;
+  }
+  text = utils.parseString(text);
   number = (number === undefined) ? 1 : number;
   number = utils.parseNumber(number);
   if (number instanceof Error || typeof text !== 'string') {
     return error.value;
   }
-  return text ? text.substring(0, number) : null;
+  return text.substring(0, number);
 };
 
 exports.LEN = function(text) {
-  if (arguments.length === 0) {
-    return error.error;
+  if (arguments.length !== 1) {
+    return error.na;
   }
 
-  if (text === null) {
-    return 0;
-  }
-
-  if (typeof text === 'string') {
-    return text ? text.length : 0;
+  if (text instanceof Error) {
+    return text;
   }
 
   if (Array.isArray(text)) {
-    return error.error
+    return error.value;
   }
 
-  return error.value;
+  var textAsString = utils.parseString(text);
+  return textAsString.length;
 };
 
 exports.LOWER = function(text) {
-  if (typeof text !== 'string') {
-    return error.value;
+  if (arguments.length !== 1) {
+    return error.na;
   }
-  return text ? text.toLowerCase() : text;
+  text = utils.parseString(text);
+  if (utils.anyIsError(text)) {
+    return text;
+  }
+  return text.toLowerCase();
 };
 
 exports.MID = function(text, start, number) {
+  if(arguments.length!=3){
+    return error.na;
+  }
+  if (start === undefined || start === null) {
+    return error.value;
+  }
   start = utils.parseNumber(start);
   number = utils.parseNumber(number);
+  if (start < 1 || number < 0) {
+    return error.value;
+  }
   if (utils.anyIsError(start, number) || typeof text !== 'string') {
     return number;
   }
@@ -3745,51 +4554,51 @@ exports.PRONETIC = function() {
 };
 
 exports.PROPER = function(text) {
-  if (text === undefined || text.length === 0) {
-    return error.value;
+  if (arguments.length !== 1) {
+    return error.na;
   }
-  if (text === true) {
-    text = 'TRUE';
-  }
-  if (text === false) {
-    text = 'FALSE';
+  if (utils.anyIsError(text)) {
+    return text;
   }
   if (isNaN(text) && typeof text === 'number') {
     return error.value;
   }
-  if (typeof text === 'number') {
-    text = '' + text;
-  }
+  text = utils.parseString(text);
 
   return text.replace(/\w\S*/g, function(txt) {
     return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
   });
 };
-
+//not exist in excel 
 exports.REGEXEXTRACT = function (text, regular_expression) {
-  if (arguments.length < 2) {
+  if (arguments.length !== 2) {
     return error.na;
   }
   var match = text.match(new RegExp(regular_expression));
   return match ? (match[match.length > 1 ? match.length - 1 : 0]) : null;
 };
 
+//not exist in excel 
 exports.REGEXMATCH = function (text, regular_expression, full) {
-  if (arguments.length < 2) {
+  if (arguments.length < 2 ||arguments.length > 3) {
     return error.na;
   }
   var match = text.match(new RegExp(regular_expression));
   return full ? match : !!match;
 };
 
+//not exist in excel 
 exports.REGEXREPLACE = function (text, regular_expression, replacement) {
-  if (arguments.length < 3) {
+  if (arguments.length !== 3) {
     return error.na;
   }
   return text.replace(new RegExp(regular_expression), replacement);
 };
 
 exports.REPLACE = function(text, position, length, new_text) {
+  if (arguments.length !== 4) {
+    return error.na;
+  }
   position = utils.parseNumber(position);
   length = utils.parseNumber(length);
   if (utils.anyIsError(position, length) ||
@@ -3801,6 +4610,14 @@ exports.REPLACE = function(text, position, length, new_text) {
 };
 
 exports.REPT = function(text, number) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
+  var someError = utils.anyError(text, number);
+  if (someError) {
+    return someError;
+  }
+  text = utils.parseString(text);
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -3809,15 +4626,26 @@ exports.REPT = function(text, number) {
 };
 
 exports.RIGHT = function(text, number) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
+  var someError = utils.anyError(text, number);
+  if (someError) {
+    return someError;
+  }
+  text = utils.parseString(text);
   number = (number === undefined) ? 1 : number;
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
   }
-  return text ? text.substring(text.length - number) : error.na;
+  return text.substring(text.length - number);
 };
 
 exports.SEARCH = function(find_text, within_text, position) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   var foundAt;
   if (typeof find_text !== 'string' || typeof within_text !== 'string') {
     return error.value;
@@ -3826,33 +4654,44 @@ exports.SEARCH = function(find_text, within_text, position) {
   foundAt = within_text.toLowerCase().indexOf(find_text.toLowerCase(), position - 1)+1;
   return (foundAt === 0)?error.value:foundAt;
 };
-
+//not exist in excel
 exports.SPLIT = function (text, separator) {
   return text.split(separator);
 };
 
 exports.SUBSTITUTE = function(text, old_text, new_text, occurrence) {
-  if (arguments.length < 3) {
+  if (arguments.length < 3 || arguments.length > 4) {
     return error.na;
   }
   if (!text || !old_text) {
     return text;
   } else if (occurrence === undefined) {
-    return text.replace(new RegExp(old_text, 'g'), new_text);
+    return text.split(old_text).join(new_text);
   } else {
+    occurrence = Math.floor(Number(occurrence));
+    if (Number.isNaN(occurrence) || occurrence <= 0) {
+      return error.value;
+    }
     var index = 0;
     var i = 0;
-    while (text.indexOf(old_text, index) > 0) {
+    while (index > -1 && text.indexOf(old_text, index) > -1) {
       index = text.indexOf(old_text, index + 1);
       i++;
-      if (i === occurrence) {
+      if (index > -1 && i === occurrence) {
         return text.substring(0, index) + new_text + text.substring(index + old_text.length);
       }
     }
+    return text;
   }
 };
 
 exports.T = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+  if (value instanceof Error) {
+    return value;
+  }
   return (typeof value === "string") ? value : '';
 };
 
@@ -3862,8 +4701,12 @@ exports.TEXT = function() {
 };
 
 exports.TRIM = function(text) {
-  if (typeof text !== 'string') {
-    return error.value;
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+  text = utils.parseString(text);
+  if (text instanceof Error) {
+    return text;
   }
   return text.replace(/ +/g, ' ').trim();
 };
@@ -3873,15 +4716,51 @@ exports.UNICHAR = exports.CHAR;
 exports.UNICODE = exports.CODE;
 
 exports.UPPER = function(text) {
-  if (typeof text !== 'string') {
-    return error.value;
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+  text = utils.parseString(text);
+  if (text instanceof Error) {
+    return text;
   }
   return text.toUpperCase();
 };
 
-//TODO
-exports.VALUE = function() {
-  throw new Error('VALUE is not implemented');
+exports.VALUE = function(num) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+  var anyError = utils.anyError(num);
+  if (anyError) {
+    return anyError;
+  }
+
+  if (typeof num !== 'string') {
+    return error.value;
+  }
+
+  var isPercent = /(%)$/.test(num) || /^(%)/.test(num);
+  num = num.replace(/^[^0-9-]{0,3}/, '');
+  num = num.replace(/[^0-9]{0,3}$/, '');
+  num = num.replace(/[\ ,]/g,'');
+
+  if(num ===''){
+    return error.value;
+  }
+
+  var output =  Number(num);
+
+  if(isNaN(output)){
+    return error.value;
+  }
+
+  output = output || 0;
+
+  if(isPercent) {
+    output = output * 0.01;
+  }
+
+  return output;
 };
 
 
@@ -4113,23 +4992,42 @@ exports.INFO = function() {
 };
 
 exports.ISBLANK = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   return value === null;
 };
 
 exports.ISBINARY = function (number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   return (/^[01]{1,10}$/).test(number);
 };
 
 exports.ISERR = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   return ([error.value, error.ref, error.div0, error.num, error.name, error.nil]).indexOf(value) >= 0 ||
     (typeof value === 'number' && (isNaN(value) || !isFinite(value)));
 };
 
 exports.ISERROR = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   return exports.ISERR(value) || value === error.na;
 };
 
 exports.ISEVEN = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   return (Math.floor(Math.abs(number)) & 1) ? false : true;
 };
 
@@ -4139,22 +5037,42 @@ exports.ISFORMULA = function() {
 };
 
 exports.ISLOGICAL = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   return value === true || value === false;
 };
 
 exports.ISNA = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   return value === error.na;
 };
 
 exports.ISNONTEXT = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   return typeof(value) !== 'string';
 };
 
 exports.ISNUMBER = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   return typeof(value) === 'number' && !isNaN(value) && isFinite(value);
 };
 
 exports.ISODD = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   return (Math.floor(Math.abs(number)) & 1) ? true : false;
 };
 
@@ -4164,10 +5082,18 @@ exports.ISREF = function() {
 };
 
 exports.ISTEXT = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   return typeof(value) === 'string';
 };
 
 exports.N = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   if (this.ISNUMBER(value)) {
     return value;
   }
@@ -4187,6 +5113,10 @@ exports.N = function(value) {
 };
 
 exports.NA = function() {
+  if (arguments.length !== 0) {
+    return error.na;
+  }
+
   return error.na;
 };
 
@@ -4202,6 +5132,10 @@ exports.SHEETS = function() {
 };
 
 exports.TYPE = function(value) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   if (this.ISNUMBER(value)) {
     return 1;
   }
@@ -4290,6 +5224,9 @@ var WEEKEND_TYPES = [
 ];
 
 exports.DATE = function (year, month, day) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   var result;
 
   year = utils.parseNumber(year);
@@ -4299,11 +5236,11 @@ exports.DATE = function (year, month, day) {
   if (utils.anyIsError(year, month, day)) {
     result = error.value;
 
-  } else if (year < 0 || month < 0 || day < 0) {
-    result = error.num;
-
   } else {
     result = new Date(year, month - 1, day);
+    if (result.getFullYear() < 0) {
+      result = error.num;
+    }
   }
 
   return result;
@@ -4371,6 +5308,9 @@ exports.DATEDIF = function (start_date, end_date, unit) {
 };
 
 exports.DATEVALUE = function (date_text) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   if (typeof date_text !== 'string') {
     return error.value;
   }
@@ -4385,6 +5325,9 @@ exports.DATEVALUE = function (date_text) {
 };
 
 exports.DAY = function (serial_number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   var date = utils.parseDate(serial_number);
   if (date instanceof Error) {
     return date;
@@ -4400,6 +5343,10 @@ function startOfDay(date) {
 }
 
 exports.DAYS = function (end_date, start_date) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
+
   end_date = utils.parseDate(end_date);
   start_date = utils.parseDate(start_date);
 
@@ -4414,6 +5361,9 @@ exports.DAYS = function (end_date, start_date) {
 };
 
 exports.DAYS360 = function (start_date, end_date, method) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   method = utils.parseBool(method);
   start_date = utils.parseDate(start_date);
   end_date = utils.parseDate(end_date);
@@ -4455,6 +5405,10 @@ exports.DAYS360 = function (start_date, end_date, method) {
 };
 
 exports.EDATE = function (start_date, months) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
+
   start_date = utils.parseDate(start_date);
 
   if (start_date instanceof Error) {
@@ -4470,6 +5424,10 @@ exports.EDATE = function (start_date, months) {
 };
 
 exports.EOMONTH = function (start_date, months) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
+
   start_date = utils.parseDate(start_date);
 
   if (start_date instanceof Error) {
@@ -4484,6 +5442,10 @@ exports.EOMONTH = function (start_date, months) {
 };
 
 exports.HOUR = function (serial_number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   serial_number = utils.parseDate(serial_number);
 
   if (serial_number instanceof Error) {
@@ -4492,7 +5454,7 @@ exports.HOUR = function (serial_number) {
 
   return serial_number.getHours();
 };
-
+//not exist in excel 
 exports.INTERVAL = function (second) {
   if (typeof second !== 'number' && typeof second !== 'string') {
     return error.value;
@@ -4524,6 +5486,10 @@ exports.INTERVAL = function (second) {
 };
 
 exports.ISOWEEKNUM = function (date) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   date = utils.parseDate(date);
 
   if (date instanceof Error) {
@@ -4538,6 +5504,10 @@ exports.ISOWEEKNUM = function (date) {
 };
 
 exports.MINUTE = function (serial_number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   serial_number = utils.parseDate(serial_number);
 
   if (serial_number instanceof Error) {
@@ -4548,6 +5518,10 @@ exports.MINUTE = function (serial_number) {
 };
 
 exports.MONTH = function (serial_number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   serial_number = utils.parseDate(serial_number);
 
   if (serial_number instanceof Error) {
@@ -4558,10 +5532,17 @@ exports.MONTH = function (serial_number) {
 };
 
 exports.NETWORKDAYS = function (start_date, end_date, holidays) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   return this.NETWORKDAYS.INTL(start_date, end_date, 1, holidays);
 };
 
 exports.NETWORKDAYS.INTL = function (start_date, end_date, weekend, holidays) {
+  if (arguments.length < 2 || arguments.length > 4) {
+    return error.na;
+  }
+
   start_date = utils.parseDate(start_date);
 
   if (start_date instanceof Error) {
@@ -4572,19 +5553,19 @@ exports.NETWORKDAYS.INTL = function (start_date, end_date, weekend, holidays) {
   if (end_date instanceof Error) {
     return end_date;
   }
-  
+
   var isMask = false;
   var maskDays = [];
-  var maskIndex = [1, 2, 3, 4, 5, 6, 0]
+  var maskIndex = [1, 2, 3, 4, 5, 6, 0];
   var maskRegex = new RegExp('^[0|1]{7}$');
-  
+
   if (weekend === undefined) {
     weekend = WEEKEND_TYPES[1];
   } else if (typeof weekend === 'string' && maskRegex.test(weekend)) {
     isMask = true;
     weekend = weekend.split('');
     for (i = 0; i < weekend.length; i++) {
-      if (weekend[i] == 1) {
+      if (weekend[i] === '1') {
         maskDays.push(maskIndex[i]);
       }
     }
@@ -4607,7 +5588,7 @@ exports.NETWORKDAYS.INTL = function (start_date, end_date, weekend, holidays) {
     }
     holidays[i] = h;
   }
-  var days = (end_date - start_date) / (1000 * 60 * 60 * 24) + 1;
+  var days = Math.round((end_date - start_date) / (1000 * 60 * 60 * 24)) + 1;
   var total = days;
   var day = start_date;
   for (i = 0; i < days; i++) {
@@ -4632,10 +5613,18 @@ exports.NETWORKDAYS.INTL = function (start_date, end_date, weekend, holidays) {
 };
 
 exports.NOW = function () {
+  if (arguments.length !== 0) {
+    return error.na;
+  }
+
   return new Date();
 };
 
 exports.SECOND = function (serial_number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   serial_number = utils.parseDate(serial_number);
   if (serial_number instanceof Error) {
     return serial_number;
@@ -4645,6 +5634,10 @@ exports.SECOND = function (serial_number) {
 };
 
 exports.TIME = function (hour, minute, second) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
+
   hour = utils.parseNumber(hour);
   minute = utils.parseNumber(minute);
   second = utils.parseNumber(second);
@@ -4659,6 +5652,10 @@ exports.TIME = function (hour, minute, second) {
 };
 
 exports.TIMEVALUE = function (time_text) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   time_text = utils.parseDate(time_text);
 
   if (time_text instanceof Error) {
@@ -4669,10 +5666,18 @@ exports.TIMEVALUE = function (time_text) {
 };
 
 exports.TODAY = function () {
+  if (arguments.length !== 0) {
+    return error.na;
+  }
+
   return startOfDay(new Date());
 };
 
 exports.WEEKDAY = function (serial_number, return_type) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
+
   serial_number = utils.parseDate(serial_number);
   if (serial_number instanceof Error) {
     return serial_number;
@@ -4686,6 +5691,10 @@ exports.WEEKDAY = function (serial_number, return_type) {
 };
 
 exports.WEEKNUM = function (serial_number, return_type) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
+
   serial_number = utils.parseDate(serial_number);
   if (serial_number instanceof Error) {
     return serial_number;
@@ -4705,10 +5714,16 @@ exports.WEEKNUM = function (serial_number, return_type) {
 };
 
 exports.WORKDAY = function (start_date, days, holidays) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   return this.WORKDAY.INTL(start_date, days, 1, holidays);
 };
 
 exports.WORKDAY.INTL = function (start_date, days, weekend, holidays) {
+  if (arguments.length < 2 || arguments.length > 4) {
+    return error.na;
+  }
   start_date = utils.parseDate(start_date);
   if (start_date instanceof Error) {
     return start_date;
@@ -4763,6 +5778,10 @@ exports.WORKDAY.INTL = function (start_date, days, weekend, holidays) {
 };
 
 exports.YEAR = function (serial_number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   serial_number = utils.parseDate(serial_number);
 
   if (serial_number instanceof Error) {
@@ -4782,6 +5801,9 @@ function daysBetween(start_date, end_date) {
 }
 
 exports.YEARFRAC = function (start_date, end_date, basis) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   start_date = utils.parseDate(start_date);
   if (start_date instanceof Error) {
     return start_date;
@@ -9944,6 +10966,9 @@ function isValidBinaryNumber(number) {
 }
 
 exports.BESSELI = function(x, n) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   n = utils.parseNumber(n);
   if (utils.anyIsError(x, n)) {
@@ -9954,6 +10979,9 @@ exports.BESSELI = function(x, n) {
 };
 
 exports.BESSELJ = function(x, n) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   n = utils.parseNumber(n);
   if (utils.anyIsError(x, n)) {
@@ -9964,6 +10992,9 @@ exports.BESSELJ = function(x, n) {
 };
 
 exports.BESSELK = function(x, n) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   n = utils.parseNumber(n);
   if (utils.anyIsError(x, n)) {
@@ -9974,6 +11005,9 @@ exports.BESSELK = function(x, n) {
 };
 
 exports.BESSELY = function(x, n) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   x = utils.parseNumber(x);
   n = utils.parseNumber(n);
   if (utils.anyIsError(x, n)) {
@@ -9984,6 +11018,9 @@ exports.BESSELY = function(x, n) {
 };
 
 exports.BIN2DEC = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Return error if number is not binary or contains more than 10 characters (10 digits)
   if (!isValidBinaryNumber(number)) {
     return error.num;
@@ -10003,6 +11040,9 @@ exports.BIN2DEC = function(number) {
 
 
 exports.BIN2HEX = function(number, places) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   // Return error if number is not binary or contains more than 10 characters (10 digits)
   if (!isValidBinaryNumber(number)) {
     return error.num;
@@ -10040,6 +11080,9 @@ exports.BIN2HEX = function(number, places) {
 };
 
 exports.BIN2OCT = function(number, places) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   // Return error if number is not binary or contains more than 10 characters (10 digits)
   if (!isValidBinaryNumber(number)) {
     return error.num;
@@ -10077,6 +11120,9 @@ exports.BIN2OCT = function(number, places) {
 };
 
 exports.BITAND = function(number1, number2) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   // Return error if either number is a non-numeric value
   number1 = utils.parseNumber(number1);
   number2 = utils.parseNumber(number2);
@@ -10104,6 +11150,10 @@ exports.BITAND = function(number1, number2) {
 };
 
 exports.BITLSHIFT = function(number, shift) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
+
   number = utils.parseNumber(number);
   shift = utils.parseNumber(shift);
   if (utils.anyIsError(number, shift)) {
@@ -10135,6 +11185,9 @@ exports.BITLSHIFT = function(number, shift) {
 };
 
 exports.BITOR = function(number1, number2) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number1 = utils.parseNumber(number1);
   number2 = utils.parseNumber(number2);
   if (utils.anyIsError(number1, number2)) {
@@ -10161,6 +11214,9 @@ exports.BITOR = function(number1, number2) {
 };
 
 exports.BITRSHIFT = function(number, shift) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   shift = utils.parseNumber(shift);
   if (utils.anyIsError(number, shift)) {
@@ -10192,6 +11248,9 @@ exports.BITRSHIFT = function(number, shift) {
 };
 
 exports.BITXOR = function(number1, number2) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number1 = utils.parseNumber(number1);
   number2 = utils.parseNumber(number2);
   if (utils.anyIsError(number1, number2)) {
@@ -10218,6 +11277,9 @@ exports.BITXOR = function(number1, number2) {
 };
 
 exports.COMPLEX = function(real, imaginary, suffix) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   real = utils.parseNumber(real);
   imaginary = utils.parseNumber(imaginary);
   if (utils.anyIsError(real, imaginary)) {
@@ -10246,6 +11308,9 @@ exports.COMPLEX = function(real, imaginary, suffix) {
 };
 
 exports.CONVERT = function(number, from_unit, to_unit) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -10531,6 +11596,9 @@ exports.CONVERT = function(number, from_unit, to_unit) {
 };
 
 exports.DEC2BIN = function(number, places) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -10572,6 +11640,9 @@ exports.DEC2BIN = function(number, places) {
 };
 
 exports.DEC2HEX = function(number, places) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -10613,6 +11684,9 @@ exports.DEC2HEX = function(number, places) {
 };
 
 exports.DEC2OCT = function(number, places) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   if (number instanceof Error) {
     return number;
@@ -10654,6 +11728,9 @@ exports.DEC2OCT = function(number, places) {
 };
 
 exports.DELTA = function(number1, number2) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   // Set number2 to zero if undefined
   number2 = (number2 === undefined) ? 0 : number2;
   number1 = utils.parseNumber(number1);
@@ -10668,6 +11745,9 @@ exports.DELTA = function(number1, number2) {
 
 // TODO: why is upper_bound not used ? The excel documentation has no examples with upper_bound
 exports.ERF = function(lower_bound, upper_bound) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   // Set number2 to zero if undefined
   upper_bound = (upper_bound === undefined) ? 0 : upper_bound;
 
@@ -10686,6 +11766,9 @@ exports.ERF.PRECISE = function() {
 };
 
 exports.ERFC = function(x) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Return error if x is not a number
   if (isNaN(x)) {
     return error.value;
@@ -10700,6 +11783,9 @@ exports.ERFC.PRECISE = function() {
 };
 
 exports.GESTEP = function(number, step) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   step = step || 0;
   number = utils.parseNumber(number);
   if (utils.anyIsError(step, number)) {
@@ -10711,6 +11797,9 @@ exports.GESTEP = function(number, step) {
 };
 
 exports.HEX2BIN = function(number, places) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   // Return error if number is not hexadecimal or contains more than ten characters (10 digits)
   if (!/^[0-9A-Fa-f]{1,10}$/.test(number)) {
     return error.num;
@@ -10758,6 +11847,10 @@ exports.HEX2BIN = function(number, places) {
 };
 
 exports.HEX2DEC = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+
   // Return error if number is not hexadecimal or contains more than ten characters (10 digits)
   if (!/^[0-9A-Fa-f]{1,10}$/.test(number)) {
     return error.num;
@@ -10771,6 +11864,9 @@ exports.HEX2DEC = function(number) {
 };
 
 exports.HEX2OCT = function(number, places) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   // Return error if number is not hexadecimal or contains more than ten characters (10 digits)
   if (!/^[0-9A-Fa-f]{1,10}$/.test(number)) {
     return error.num;
@@ -10815,6 +11911,9 @@ exports.HEX2OCT = function(number, places) {
 };
 
 exports.IMABS = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using exports.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -10829,6 +11928,9 @@ exports.IMABS = function(inumber) {
 };
 
 exports.IMAGINARY = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   if (inumber === undefined || inumber === true || inumber === false) {
     return error.value;
   }
@@ -10842,6 +11944,9 @@ exports.IMAGINARY = function(inumber) {
   if (['i', 'j'].indexOf(inumber) >= 0) {
     return 1;
   }
+
+  // Force string type
+  inumber = inumber + '';
 
   // Normalize imaginary coefficient
   inumber = inumber.replace('+i', '+1i').replace('-i', '-1i').replace('+j', '+1j').replace('-j', '-1j');
@@ -10887,6 +11992,9 @@ exports.IMAGINARY = function(inumber) {
 };
 
 exports.IMARGUMENT = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using exports.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -10932,6 +12040,9 @@ exports.IMARGUMENT = function(inumber) {
 };
 
 exports.IMCONJUGATE = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using exports.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -10949,6 +12060,9 @@ exports.IMCONJUGATE = function(inumber) {
 };
 
 exports.IMCOS = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using exports.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -10966,6 +12080,9 @@ exports.IMCOS = function(inumber) {
 };
 
 exports.IMCOSH = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using exports.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -10983,6 +12100,9 @@ exports.IMCOSH = function(inumber) {
 };
 
 exports.IMCOT = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using Formula.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -10996,6 +12116,9 @@ exports.IMCOT = function(inumber) {
 };
 
 exports.IMDIV = function(inumber1, inumber2) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using Formula.js [http://formulajs.org]
   var a = exports.IMREAL(inumber1);
   var b = exports.IMAGINARY(inumber1);
@@ -11027,6 +12150,9 @@ exports.IMDIV = function(inumber1, inumber2) {
 };
 
 exports.IMEXP = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using Formula.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -11045,6 +12171,9 @@ exports.IMEXP = function(inumber) {
 };
 
 exports.IMLN = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using Formula.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -11062,6 +12191,9 @@ exports.IMLN = function(inumber) {
 };
 
 exports.IMLOG10 = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using Formula.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -11079,6 +12211,9 @@ exports.IMLOG10 = function(inumber) {
 };
 
 exports.IMLOG2 = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using Formula.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -11096,6 +12231,9 @@ exports.IMLOG2 = function(inumber) {
 };
 
 exports.IMPOWER = function(inumber, number) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   number = utils.parseNumber(number);
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -11118,12 +12256,11 @@ exports.IMPOWER = function(inumber, number) {
 };
 
 exports.IMPRODUCT = function() {
+  if (arguments.length < 1) {
+    return error.na;
+  }
   // Initialize result
   var result = arguments[0];
-
-  if (!arguments.length) {
-    return error.value;
-  }
 
   // Loop on all numbers
   for (var i = 1; i < arguments.length; i++) {
@@ -11146,6 +12283,9 @@ exports.IMPRODUCT = function() {
 };
 
 exports.IMREAL = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   if (inumber === undefined || inumber === true || inumber === false) {
     return error.value;
   }
@@ -11159,6 +12299,9 @@ exports.IMREAL = function(inumber) {
   if (['i', '+i', '1i', '+1i', '-i', '-1i', 'j', '+j', '1j', '+1j', '-j', '-1j'].indexOf(inumber) >= 0) {
     return 0;
   }
+
+  // Force String type
+  inumber = inumber + '';
 
   // Lookup sign
   var plus = inumber.indexOf('+');
@@ -11200,6 +12343,9 @@ exports.IMREAL = function(inumber) {
 };
 
 exports.IMSEC = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Return error if inumber is a logical value
   if (inumber === true || inumber === false) {
     return error.value;
@@ -11231,6 +12377,9 @@ exports.IMSECH = function(inumber) {
 };
 
 exports.IMSIN = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using Formula.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -11248,6 +12397,9 @@ exports.IMSIN = function(inumber) {
 };
 
 exports.IMSINH = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using Formula.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -11265,6 +12417,9 @@ exports.IMSINH = function(inumber) {
 };
 
 exports.IMSQRT = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using Formula.js [http://formulajs.org]
   var x = exports.IMREAL(inumber);
   var y = exports.IMAGINARY(inumber);
@@ -11288,6 +12443,9 @@ exports.IMSQRT = function(inumber) {
 };
 
 exports.IMCSC = function (inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Return error if inumber is a logical value
   if (inumber === true || inumber === false) {
     return error.value;
@@ -11307,6 +12465,9 @@ exports.IMCSC = function (inumber) {
 };
 
 exports.IMCSCH = function (inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Return error if inumber is a logical value
   if (inumber === true || inumber === false) {
     return error.value;
@@ -11326,6 +12487,9 @@ exports.IMCSCH = function (inumber) {
 };
 
 exports.IMSUB = function(inumber1, inumber2) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   // Lookup real and imaginary coefficients using Formula.js [http://formulajs.org]
   var a = this.IMREAL(inumber1);
   var b = this.IMAGINARY(inumber1);
@@ -11351,9 +12515,10 @@ exports.IMSUB = function(inumber1, inumber2) {
 };
 
 exports.IMSUM = function() {
-  if (!arguments.length) {
-    return error.value;
+  if (arguments.length < 1) {
+    return error.na;
   }
+
   var args = utils.flatten(arguments);
 
   // Initialize result
@@ -11380,6 +12545,9 @@ exports.IMSUM = function() {
 };
 
 exports.IMTAN = function(inumber) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Return error if inumber is a logical value
   if (inumber === true || inumber === false) {
     return error.value;
@@ -11398,6 +12566,9 @@ exports.IMTAN = function(inumber) {
 };
 
 exports.OCT2BIN = function(number, places) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   // Return error if number is not hexadecimal or contains more than ten characters (10 digits)
   if (!/^[0-7]{1,10}$/.test(number)) {
     return error.num;
@@ -11445,6 +12616,9 @@ exports.OCT2BIN = function(number, places) {
 };
 
 exports.OCT2DEC = function(number) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
   // Return error if number is not octal or contains more than ten characters (10 digits)
   if (!/^[0-7]{1,10}$/.test(number)) {
     return error.num;
@@ -11458,6 +12632,9 @@ exports.OCT2DEC = function(number) {
 };
 
 exports.OCT2HEX = function(number, places) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   // Return error if number is not octal or contains more than ten characters (10 digits)
   if (!/^[0-7]{1,10}$/.test(number)) {
     return error.num;
@@ -12454,6 +13631,9 @@ for (var c in categories) {
     exports[f] = exports[f] || category[f];
   }
 }
+exports.utils = {
+  errors: __webpack_require__(0)
+};
 
 
 /***/ }),
@@ -12475,10 +13655,10 @@ function set(fn, root) {
   return fn;
 }
 
-exports.BETADIST = statistical.BETA.DIST;
+exports.BETADIST = statistical.BETADIST;
 exports.BETAINV = statistical.BETA.INV;
 exports.BINOMDIST = statistical.BINOM.DIST;
-exports.CEILING = exports.ISOCEILING = set(mathTrig.CEILING.MATH, mathTrig.CEILING);
+exports.CEILING = exports.ISOCEILING = set(mathTrig.CEILING, mathTrig.CEILING.MATH);
 exports.CEILINGMATH = mathTrig.CEILING.MATH;
 exports.CEILINGPRECISE = mathTrig.CEILING.PRECISE;
 exports.CHIDIST = statistical.CHISQ.DIST;
@@ -12498,7 +13678,7 @@ exports.FDIST = statistical.F.DIST;
 exports.FDISTRT = statistical.F.DIST.RT;
 exports.FINVRT = statistical.F.INV.RT;
 exports.FINV = statistical.F.INV;
-exports.FLOOR = set(mathTrig.FLOOR.MATH, mathTrig.FLOOR);
+exports.FLOOR = set(mathTrig.FLOOR, mathTrig.FLOOR.MATH);
 exports.FLOORMATH = mathTrig.FLOOR.MATH;
 exports.FLOORPRECISE = mathTrig.FLOOR.PRECISE;
 exports.FTEST = statistical.F.TEST;
@@ -12815,6 +13995,7 @@ function compact(array) {
   return result;
 }
 
+//not exist in excel
 exports.FINDFIELD = function(database, title) {
   var index = null;
 
@@ -12893,6 +14074,9 @@ function findResultIndex(database, criterias) {
 
 // Database functions
 exports.DAVERAGE = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -12916,6 +14100,9 @@ exports.DAVERAGE = function(database, field, criteria) {
 };
 
 exports.DCOUNT = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -12940,6 +14127,9 @@ exports.DCOUNT = function(database, field, criteria) {
 };
 
 exports.DCOUNTA = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -12965,6 +14155,9 @@ exports.DCOUNTA = function(database, field, criteria) {
 };
 
 exports.DGET = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -12994,6 +14187,9 @@ exports.DGET = function(database, field, criteria) {
 };
 
 exports.DMAX = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -13020,6 +14216,9 @@ exports.DMAX = function(database, field, criteria) {
 };
 
 exports.DMIN = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -13047,6 +14246,9 @@ exports.DMIN = function(database, field, criteria) {
 };
 
 exports.DPRODUCT = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -13079,6 +14281,9 @@ exports.DPRODUCT = function(database, field, criteria) {
 };
 
 exports.DSTDEV = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -13103,6 +14308,9 @@ exports.DSTDEV = function(database, field, criteria) {
 };
 
 exports.DSTDEVP = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -13128,6 +14336,9 @@ exports.DSTDEVP = function(database, field, criteria) {
 };
 
 exports.DSUM = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  } 
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -13152,6 +14363,9 @@ exports.DSUM = function(database, field, criteria) {
 };
 
 exports.DVAR = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -13175,6 +14389,9 @@ exports.DVAR = function(database, field, criteria) {
 };
 
 exports.DVARP = function(database, field, criteria) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   // Return error if field is not a number and not a string
   if (isNaN(field) && (typeof field !== "string")) {
     return error.value;
@@ -13207,9 +14424,21 @@ var utils = __webpack_require__(1);
 var information = __webpack_require__(8);
 
 exports.AND = function() {
+  if (arguments.length < 1) {
+    return error.na;
+  }
   var args = utils.flatten(arguments);
-  var result = true;
+  var result = error.value;
   for (var i = 0; i < args.length; i++) {
+    if (args[i] instanceof Error) {
+      return args[i];
+    }
+    if (args[i] === undefined || args[i] === null || typeof args[i] === "string") {
+      continue;
+    }
+    if (result === error.value) {
+      result = true;
+    }
     if (!args[i]) {
       result = false;
     }
@@ -13235,14 +14464,34 @@ exports.CHOOSE = function() {
 };
 
 exports.FALSE = function() {
+  if (arguments.length !== 0) {
+    return error.na;
+  }
   return false;
 };
 
 exports.IF = function(test, then_value, otherwise_value) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
+  if (test instanceof Error) {
+    return test;
+  }
+  then_value = arguments.length >= 2 ? then_value : true;
+  if (then_value === undefined || then_value === null) {
+    then_value = 0;
+  }
+  otherwise_value = arguments.length === 3 ? otherwise_value : false;
+  if (otherwise_value === undefined || otherwise_value === null) {
+    otherwise_value = 0;
+  }
   return test ? then_value : otherwise_value;
 };
 
 exports.IFS = function() {
+  if (arguments.length < 2 || arguments.length % 2 !== 0) {
+    return error.na;
+  }
   for (var i = 0; i < arguments.length / 2; i++) {
     if (arguments[i * 2]) {
       return arguments[i * 2 + 1];
@@ -13252,6 +14501,9 @@ exports.IFS = function() {
 };
 
 exports.IFERROR = function(value, valueIfError) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   if (information.ISERROR(value)) {
     return valueIfError;
   }
@@ -13259,17 +14511,41 @@ exports.IFERROR = function(value, valueIfError) {
 };
 
 exports.IFNA = function(value, value_if_na) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   return value === error.na ? value_if_na : value;
 };
 
 exports.NOT = function(logical) {
+  if (arguments.length !== 1) {
+    return error.na;
+  }
+  if (typeof logical === "string") {
+    return error.value;
+  }
+  if (logical instanceof Error) {
+    return logical;
+  }
   return !logical;
 };
 
 exports.OR = function() {
+  if (arguments.length < 1) {
+    return error.na;
+  }
   var args = utils.flatten(arguments);
-  var result = false;
+  var result = error.value;
   for (var i = 0; i < args.length; i++) {
+    if (args[i] instanceof Error) {
+      return args[i];
+    }
+    if (args[i] === undefined || args[i] === null || typeof args[i] === "string") {
+      continue;
+    }
+    if (result === error.value) {
+      result = false;
+    }
     if (args[i]) {
       result = true;
     }
@@ -13278,21 +14554,42 @@ exports.OR = function() {
 };
 
 exports.TRUE = function() {
+  if (arguments.length !== 0) {
+    return error.na;
+  }
   return true;
 };
 
 exports.XOR = function() {
+  if (arguments.length < 1) {
+    return error.na;
+  }
   var args = utils.flatten(arguments);
-  var result = 0;
+  var result = error.value;
   for (var i = 0; i < args.length; i++) {
+    if (args[i] instanceof Error) {
+      return args[i];
+    }
+    if (args[i] === undefined || args[i] === null || typeof args[i] === "string") {
+      continue;
+    }
+    if (result === error.value) {
+      result = 0;
+    }
     if (args[i]) {
       result++;
     }
+  }
+  if (result === error.value) {
+    return result;
   }
   return (Math.floor(Math.abs(result)) & 1) ? true : false;
 };
 
 exports.SWITCH = function () {
+  if (arguments.length < 3){
+    return error.na;
+  }
   var result;
 
   if (arguments.length > 0)  {
@@ -13341,6 +14638,9 @@ function ensureDate(d) {
 }
 
 exports.ACCRINT = function(issue, first, settlement, rate, par, frequency, basis) {
+  if (arguments.length < 6 || arguments.length > 8) {
+    return error.na;
+  }
   // Return error if either date is invalid
   issue      = ensureDate(issue);
   first      = ensureDate(first);
@@ -13423,6 +14723,9 @@ exports.COUPPCD = function() {
 };
 
 exports.CUMIPMT = function(rate, periods, value, start, end, type) {
+  if (arguments.length !== 6) {
+    return error.na;
+  }
   rate = utils.parseNumber(rate);
   periods = utils.parseNumber(periods);
   value = utils.parseNumber(value);
@@ -13467,7 +14770,9 @@ exports.CUMIPMT = function(rate, periods, value, start, end, type) {
 exports.CUMPRINC = function(rate, periods, value, start, end, type) {
   // Credits: algorithm inspired by Apache OpenOffice
   // Credits: Hannes Stiebitzhofer for the translations of function and variable names
-
+  if (arguments.length !== 6) {
+    return error.na;
+  }
   rate = utils.parseNumber(rate);
   periods = utils.parseNumber(periods);
   value = utils.parseNumber(value);
@@ -13514,6 +14819,9 @@ exports.CUMPRINC = function(rate, periods, value, start, end, type) {
 };
 
 exports.DB = function(cost, salvage, life, period, month) {
+  if (arguments.length < 4 || arguments.length > 5) {
+    return error.na;
+  }
   // Initialize month
   month = (month === undefined) ? 12 : month;
 
@@ -13574,6 +14882,9 @@ exports.DB = function(cost, salvage, life, period, month) {
 };
 
 exports.DDB = function(cost, salvage, life, period, factor) {
+  if (arguments.length < 4 || arguments.length > 5) {
+    return error.na;
+  }
   // Initialize factor
   factor = (factor === undefined) ? 2 : factor;
 
@@ -13619,6 +14930,9 @@ exports.DISC = function() {
 };
 
 exports.DOLLARDE = function(dollar, fraction) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   // Credits: algorithm inspired by Apache OpenOffice
 
   dollar = utils.parseNumber(dollar);
@@ -13655,6 +14969,9 @@ exports.DOLLARDE = function(dollar, fraction) {
 };
 
 exports.DOLLARFR = function(dollar, fraction) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   // Credits: algorithm inspired by Apache OpenOffice
 
   dollar = utils.parseNumber(dollar);
@@ -13692,6 +15009,9 @@ exports.DURATION = function() {
 };
 
 exports.EFFECT = function(rate, periods) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   rate = utils.parseNumber(rate);
   periods = utils.parseNumber(periods);
   if (utils.anyIsError(rate, periods)) {
@@ -13711,6 +15031,9 @@ exports.EFFECT = function(rate, periods) {
 };
 
 exports.FV = function(rate, periods, payment, value, type) {
+  if (arguments.length < 3 || arguments.length > 5) {
+    return error.na;
+  }
   // Credits: algorithm inspired by Apache OpenOffice
 
   value = value || 0;
@@ -13741,6 +15064,9 @@ exports.FV = function(rate, periods, payment, value, type) {
 };
 
 exports.FVSCHEDULE = function(principal, schedule) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   principal = utils.parseNumber(principal);
   schedule = utils.parseNumberArray(utils.flatten(schedule));
   if (utils.anyIsError(principal, schedule)) {
@@ -13766,6 +15092,9 @@ exports.INTRATE = function() {
 };
 
 exports.IPMT = function(rate, period, periods, present, future, type) {
+  if (arguments.length < 4 || arguments.length > 6) {
+    return error.na;
+  }
   // Credits: algorithm inspired by Apache OpenOffice
 
   future = future || 0;
@@ -13805,6 +15134,9 @@ exports.IPMT = function(rate, period, periods, present, future, type) {
 };
 
 exports.IRR = function(values, guess) {
+  if (arguments.length < 1 || arguments.length > 2) {
+    return error.na;
+  }
   // Credits: algorithm inspired by Apache OpenOffice
 
   guess = guess || 0;
@@ -13878,6 +15210,9 @@ exports.IRR = function(values, guess) {
 };
 
 exports.ISPMT = function(rate, period, periods, value) {
+  if (arguments.length !== 4) {
+    return error.na;
+  }
   rate = utils.parseNumber(rate);
   period = utils.parseNumber(period);
   periods = utils.parseNumber(periods);
@@ -13896,6 +15231,9 @@ exports.MDURATION = function() {
 };
 
 exports.MIRR = function(values, finance_rate, reinvest_rate) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   values = utils.parseNumberArray(utils.flatten(values));
   finance_rate = utils.parseNumber(finance_rate);
   reinvest_rate = utils.parseNumber(reinvest_rate);
@@ -13924,6 +15262,9 @@ exports.MIRR = function(values, finance_rate, reinvest_rate) {
 };
 
 exports.NOMINAL = function(rate, periods) {
+  if (arguments.length !== 2) {
+    return error.na;
+  }
   rate = utils.parseNumber(rate);
   periods = utils.parseNumber(periods);
   if (utils.anyIsError(rate, periods)) {
@@ -13943,6 +15284,9 @@ exports.NOMINAL = function(rate, periods) {
 };
 
 exports.NPER = function(rate, payment, present, future, type) {
+  if (arguments.length < 3 || arguments.length > 5) {
+    return error.na;
+  }
   type = (type === undefined) ? 0 : type;
   future = (future === undefined) ? 0 : future;
 
@@ -13966,6 +15310,9 @@ exports.NPER = function(rate, payment, present, future, type) {
 };
 
 exports.NPV = function() {
+  if (arguments.length < 2) {
+    return error.na;
+  }
   var args = utils.parseNumberArray(utils.flatten(arguments));
   if (args instanceof Error) {
     return args;
@@ -14007,6 +15354,9 @@ exports.ODDLYIELD = function() {
 };
 
 exports.PDURATION = function(rate, present, future) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   rate = utils.parseNumber(rate);
   present = utils.parseNumber(present);
   future = utils.parseNumber(future);
@@ -14024,6 +15374,9 @@ exports.PDURATION = function(rate, present, future) {
 };
 
 exports.PMT = function(rate, periods, present, future, type) {
+  if (arguments.length < 3 || arguments.length > 5) {
+    return error.na;
+  }
   // Credits: algorithm inspired by Apache OpenOffice
 
   future = future || 0;
@@ -14054,6 +15407,9 @@ exports.PMT = function(rate, periods, present, future, type) {
 };
 
 exports.PPMT = function(rate, period, periods, present, future, type) {
+  if (arguments.length < 4 || arguments.length > 6) {
+    return error.na;
+  }
   future = future || 0;
   type = type || 0;
 
@@ -14085,6 +15441,9 @@ exports.PRICEMAT = function() {
 };
 
 exports.PV = function(rate, periods, payment, future, type) {
+  if (arguments.length < 3 || arguments.length > 5) {
+    return error.na;
+  }
   future = future || 0;
   type = type || 0;
 
@@ -14106,6 +15465,9 @@ exports.PV = function(rate, periods, payment, future, type) {
 };
 
 exports.RATE = function(periods, payment, present, future, type, guess) {
+  if (arguments.length < 3 || arguments.length > 6) {
+    return error.na;
+  }
   guess = (guess === undefined) ? 0.01 : guess;
   future = (future === undefined) ? 0 : future;
   type = (type === undefined) ? 0 : type;
@@ -14159,6 +15521,9 @@ exports.RECEIVED = function() {
 };
 
 exports.RRI = function(periods, present, future) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   periods = utils.parseNumber(periods);
   present = utils.parseNumber(present);
   future = utils.parseNumber(future);
@@ -14176,6 +15541,9 @@ exports.RRI = function(periods, present, future) {
 };
 
 exports.SLN = function(cost, salvage, life) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   cost = utils.parseNumber(cost);
   salvage = utils.parseNumber(salvage);
   life = utils.parseNumber(life);
@@ -14193,6 +15561,9 @@ exports.SLN = function(cost, salvage, life) {
 };
 
 exports.SYD = function(cost, salvage, life, period) {
+  if (arguments.length !== 4) {
+    return error.na;
+  }
   // Return error if any of the parameters is not a number
   cost = utils.parseNumber(cost);
   salvage = utils.parseNumber(salvage);
@@ -14220,6 +15591,9 @@ exports.SYD = function(cost, salvage, life, period) {
 };
 
 exports.TBILLEQ = function(settlement, maturity, discount) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   settlement = utils.parseDate(settlement);
   maturity = utils.parseDate(maturity);
   discount = utils.parseNumber(discount);
@@ -14247,6 +15621,9 @@ exports.TBILLEQ = function(settlement, maturity, discount) {
 };
 
 exports.TBILLPRICE = function(settlement, maturity, discount) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   settlement = utils.parseDate(settlement);
   maturity = utils.parseDate(maturity);
   discount = utils.parseNumber(discount);
@@ -14274,6 +15651,9 @@ exports.TBILLPRICE = function(settlement, maturity, discount) {
 };
 
 exports.TBILLYIELD = function(settlement, maturity, price) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   settlement = utils.parseDate(settlement);
   maturity = utils.parseDate(maturity);
   price = utils.parseNumber(price);
@@ -14306,6 +15686,9 @@ exports.VDB = function() {
 };
 
 exports.XIRR = function(values, dates, guess) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   // Credits: algorithm inspired by Apache OpenOffice
 
   values = utils.parseNumberArray(utils.flatten(values));
@@ -14377,6 +15760,9 @@ exports.XIRR = function(values, dates, guess) {
 };
 
 exports.XNPV = function(rate, values, dates) {
+  if (arguments.length !== 3) {
+    return error.na;
+  }
   rate = utils.parseNumber(rate);
   values = utils.parseNumberArray(utils.flatten(values));
   dates = utils.parseDateArray(utils.flatten(dates));
@@ -14414,7 +15800,10 @@ exports.YIELDMAT = function() {
 var error = __webpack_require__(0);
 var utils = __webpack_require__(1);
 
-exports.MATCH = function(lookupValue, lookupArray, matchType) {
+exports.MATCH = function (lookupValue, lookupArray, matchType) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   if (!lookupValue && !lookupArray) {
     return error.na;
   }
@@ -14476,21 +15865,30 @@ exports.MATCH = function(lookupValue, lookupArray, matchType) {
 };
 
 exports.VLOOKUP = function (needle, table, index, rangeLookup) {
-  if (!needle || !table || !index) {
+  if (arguments.length < 3 || arguments.length > 4) {
+    return error.na;
+  }
+  if (!table || !index) {
     return error.na;
   }
 
   rangeLookup = !(rangeLookup === 0 || rangeLookup === false);
   var result = error.na;
+  var isNumberLookup = (typeof needle === "number");
+  var exactMatchOnly = false;
   for (var i = 0; i < table.length; i++) {
     var row = table[i];
 
     if (row[0] === needle) {
       result = (index < (row.length + 1) ? row[index - 1] : error.ref);
       break;
-    } else if ((rangeLookup && row[0] <= needle) ||
-      (rangeLookup && typeof row[0] === "string" && row[0].localeCompare(needle) < 0)) {
+    } else if (!exactMatchOnly && ((isNumberLookup && rangeLookup && row[0] <= needle) ||
+      (rangeLookup && typeof row[0] === "string" && row[0].localeCompare(needle) < 0))) {
       result = (index < (row.length + 1) ? row[index - 1] : error.ref);
+    }
+
+    if (isNumberLookup && row[0] > needle) {
+      exactMatchOnly = true;
     }
   }
 
@@ -14498,47 +15896,66 @@ exports.VLOOKUP = function (needle, table, index, rangeLookup) {
 };
 
 exports.HLOOKUP = function (needle, table, index, rangeLookup) {
-  if (!needle || !table || !index) {
+  if (arguments.length < 3 || arguments.length > 4) {
     return error.na;
   }
-
-  rangeLookup = rangeLookup || false;
-
-  var transposedTable = utils.transpose(table);
-
-  for (var i = 0; i < transposedTable.length; i++) {
-    var row = transposedTable[i];
-    if ((!rangeLookup && row[0] === needle) ||
-      ((row[0] === needle) ||
-        (rangeLookup && typeof row[0] === "string" && row[0].toLowerCase().indexOf(needle.toLowerCase()) !== -1))) {
-      return (index < (row.length + 1) ? row[index - 1] : error.ref);
-    }
-  }
-
-  return error.na;
+  return exports.VLOOKUP(needle, utils.transpose(table), index, rangeLookup);
 };
 
 exports.LOOKUP = function (searchCriterion, array, resultArray) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
   array = utils.flatten(array);
   resultArray = utils.flatten(resultArray);
+  var isNumberLookup = (typeof searchCriterion === "number");
+  var result = error.na;
 
-  var index = array.indexOf(searchCriterion);
-
-  if (index > -1) {
-    return resultArray[index];
-  } else {
-    return resultArray[resultArray.length - 1];
+  for (var i = 0; i < array.length; i++) {
+    if (array[i] === searchCriterion) {
+      return resultArray[i];
+    } else if ((isNumberLookup && array[i] <= searchCriterion) ||
+      (typeof array[i] === "string" && array[i].localeCompare(searchCriterion) < 0)) {
+      result = resultArray[i];
+    } else if ((isNumberLookup && array[i] > searchCriterion)) {
+      return result;
+    }
   }
+
+  return result;
 };
 
 exports.INDEX = function (cellRange, rowNumber, columnNumber) {
-  columnNumber = columnNumber ? columnNumber : 1;
-  rowNumber = rowNumber ? rowNumber : 1;
+  if (arguments.length < 2 || arguments.length > 3) {
+    return error.na;
+  }
+  var someError = utils.anyError(cellRange, rowNumber, columnNumber);
+  if (someError) {
+    return someError;
+  }
 
-  if (rowNumber <= cellRange.length) {
-    if (columnNumber <= cellRange[rowNumber - 1].length) {
-      return cellRange[rowNumber - 1][columnNumber - 1];
-    }
+  if (!Array.isArray(cellRange)) {
+    return error.value;
+  }
+
+  var isOneDimensionRange = cellRange.length > 0 && !Array.isArray(cellRange[0]);
+
+  if (isOneDimensionRange && !columnNumber) {
+    columnNumber = rowNumber;
+    rowNumber = 1;
+  } else {
+    columnNumber = columnNumber ? columnNumber : 1;
+    rowNumber = rowNumber ? rowNumber : 1;
+  }
+
+  if (columnNumber < 0 || rowNumber < 0) {
+    return error.value;
+  }
+
+  if (isOneDimensionRange && rowNumber === 1 && columnNumber <= cellRange.length) {
+    return cellRange[columnNumber - 1];
+  } else if (rowNumber <= cellRange.length && columnNumber <= cellRange[rowNumber - 1].length) {
+    return cellRange[rowNumber - 1][columnNumber - 1];
   }
 
   return error.ref;

@@ -1,6 +1,6 @@
 {
   "name": "@startinfinity/hot-formula-parser",
-  "version": "6.0.2",
+  "version": "6.1.0",
   "description": "Formula parser",
   "main": "./index",
   "module": "./index.mjs",
