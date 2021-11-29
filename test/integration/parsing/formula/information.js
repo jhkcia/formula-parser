@@ -11,7 +11,7 @@ describe('.parse() information formulas', () => {
   });
 
   it('ISBINARY', () => {
-    expect(parser.parse('ISBINARY()')).toMatchObject({error: null, result: false});
+    expect(parser.parse('ISBINARY()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('ISBINARY(1)')).toMatchObject({error: null, result: true});
     expect(parser.parse('ISBINARY(0)')).toMatchObject({error: null, result: true});
     expect(parser.parse('ISBINARY("1010")')).toMatchObject({error: null, result: true});
@@ -39,7 +39,7 @@ describe('.parse() information formulas', () => {
   });
 
   it('ISNONTEXT', () => {
-    expect(parser.parse('ISNONTEXT()')).toMatchObject({error: null, result: true});
+    expect(parser.parse('ISNONTEXT()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('ISNONTEXT(1)')).toMatchObject({error: null, result: true});
     expect(parser.parse('ISNONTEXT(TRUE)')).toMatchObject({error: null, result: true});
     expect(parser.parse('ISNONTEXT("FALSE")')).toMatchObject({error: null, result: false});
@@ -47,7 +47,7 @@ describe('.parse() information formulas', () => {
   });
 
   it('ISNUMBER', () => {
-    expect(parser.parse('ISNUMBER()')).toMatchObject({error: null, result: false});
+    expect(parser.parse('ISNUMBER()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('ISNUMBER(1)')).toMatchObject({error: null, result: true});
     expect(parser.parse('ISNUMBER(0.142342)')).toMatchObject({error: null, result: true});
     expect(parser.parse('ISNUMBER(TRUE)')).toMatchObject({error: null, result: false});
@@ -63,7 +63,7 @@ describe('.parse() information formulas', () => {
   });
 
   it('ISTEXT', () => {
-    expect(parser.parse('ISTEXT()')).toMatchObject({error: null, result: false});
+    expect(parser.parse('ISTEXT()')).toMatchObject({error: '#N/A', result: null});
     expect(parser.parse('ISTEXT(1)')).toMatchObject({error: null, result: false});
     expect(parser.parse('ISTEXT(TRUE)')).toMatchObject({error: null, result: false});
     expect(parser.parse('ISTEXT("FALSE")')).toMatchObject({error: null, result: true});

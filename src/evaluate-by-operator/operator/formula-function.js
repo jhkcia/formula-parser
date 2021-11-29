@@ -1,4 +1,4 @@
-import formulajs from '@formulajs/formulajs';
+import formulajs from '@startinfinity/formulajs';
 import SUPPORTED_FORMULAS from './../../supported-formulas';
 import {ERROR_NAME} from './../../error';
 
